@@ -100,17 +100,3 @@ class MyLexer(object):
              if not tok: 
                  break
              print(tok)
-
-# Build the lexer and try it out
-m = MyLexer()
-m.build()           # Build the lexer
-m.test('''FUNCTION square(){
-  PENDOWN
-  FOR (4) {
-    GO 100
-    RIGHT 90.5
-  }
-  PENUP
-}
-square()
-''')     # Test it

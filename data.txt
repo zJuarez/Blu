@@ -1,0 +1,10 @@
+'''FUNCTION square(){
+  PENDOWN
+  FOR (4) {
+    GO 100
+    RIGHT 90.5
+  }
+  PENUP
+}
+square()
+'''
