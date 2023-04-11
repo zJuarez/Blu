@@ -31,7 +31,7 @@ class MyLexer(object):
     tokens = ( 'EQUAL', 'PLUS', 'MINUS', 'TIMES', 
           'DIVIDE', 'LPAREN', 'RPAREN', 'LCOMP', 'RCOMP', 'COMMA', 
           'DOTS', 'LBRACKET', 'RBRACKET', 'LSQBRACKET', 
-          'RSQBRACKET', 'AMPERSON', 'BAR', 'ICTE', 'FCTE', 'SCTE', 
+          'RSQBRACKET', 'AMPERSON', 'BAR', 'EXC', 'ICTE', 'FCTE', 'SCTE', 
           'CCTE', 'BCTE', 'ID') + tuple(reserved.values())
     
     # Regular expression rules for simple tokens
@@ -52,6 +52,7 @@ class MyLexer(object):
     t_RSQBRACKET = r'\]'
     t_AMPERSON = r'\&'
     t_BAR = r'\|'
+    t_EXC = r'\!'
 
     # Token matching rules are written as regexs
     t_SCTE = r'\".*\"'
