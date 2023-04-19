@@ -47,7 +47,7 @@ class BluUI:
         # Crear encabezado del canvas con botón de borrar
         canvas_header = tk.Frame(self.canvas_frame, padx=10, pady=5)
         canvas_header.pack(side="top", fill="x")
-        canvas_header_label = tk.Label(canvas_header, text="Canvas", font=("Arial", 12, "bold"))
+        canvas_header_label = tk.Label(canvas_header, text="Canvas (" + str(int(canvas_width)) + "x" + str(int(canvas_height)) + ")", font=("Arial", 12, "bold"))
         canvas_header_label.pack(side="top")
 
         clear_button = tk.Button(canvas_header, image=self.clear_icon, command=self.clear_canvas)
