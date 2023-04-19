@@ -123,5 +123,6 @@ if __name__ == "__main__":
     blu_editor = BluUI(root)
     # Make the window take up the full screen
     root.state("zoomed")
-
+    root.config(padx=30, pady=30, bg="")
+    root.configure(bg="#A9CBD9")
     root.mainloop()
