@@ -8,12 +8,21 @@ class MyLexer(object):
     'ELSE' : 'ELSE',
     'FOR' : 'FOR',
     'POS': 'POS',
+    'GET_POS_X': 'GET_POS_X',
+    'GET_POS_Y': 'GET_POS_Y',
     'BG' : 'BG',
+    'GET_BG' : 'GET_BG',
     'COLOR': 'COLOR',
+    'GET_COLOR' : 'GET_COLOR',
     'PENDOWN': 'PENDOWN',
+    'IS_PENDOWN': 'IS_PENDOWN',
     'PENUP': 'PENUP',
+    'IS_PENUP': 'IS_PENUP',
     'WIDTH' : 'WIDTH',
+    'GET_WIDTH' : 'GET_WIDTH',
     'GO' : 'GO',
+    'ORIENTATION' : 'ORIENTATION',
+    'GET_ORIENTATION' : 'GET_ORIENTATION',
     'RIGHT' : 'RIGHT',
     'LEFT' : 'LEFT',
     'PRINT': 'PRINT',
@@ -24,7 +33,10 @@ class MyLexer(object):
     'CHAR' : 'CHAR',
     'IN' : 'IN',
     'true': 'true',
-    'false' : 'false'
+    'false' : 'false',
+    'CIRCLE': 'CIRCLE',
+    'CURVE_C': 'CURVE_C',
+    'CURVE_Q' : 'QURVE_Q',
     }
 
     # All tokens must be named in advance.
