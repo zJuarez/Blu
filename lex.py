@@ -36,7 +36,7 @@ class MyLexer(object):
     'false' : 'false',
     'CIRCLE': 'CIRCLE',
     'CURVE_C': 'CURVE_C',
-    'CURVE_Q' : 'QURVE_Q',
+    'CURVE_Q' : 'CURVE_Q',
     }
 
     # All tokens must be named in advance.
