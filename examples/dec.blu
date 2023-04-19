@@ -1,0 +1,4 @@
+BOOL flag = TRUE, pompis, secondFlag = FALSE
+INT x = 2, y, z = 44
+STRING p = "hola"
+CHAR c = 'v'
