@@ -1,10 +1,10 @@
 import tkinter as tk
 from PIL import Image, ImageTk
 
-class LogoUI:
+class BluUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Logo UI")
+        self.root.title("Blu UI")
         self.create_icons()
         self.create_frames()
         self.create_widgets()
@@ -120,7 +120,7 @@ class LogoUI:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    logo_editor = LogoUI(root)
+    blu_editor = BluUI(root)
     # Make the window take up the full screen
     root.state("zoomed")
 
