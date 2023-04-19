@@ -32,8 +32,8 @@ class MyLexer(object):
     'BOOL' : 'BOOL',
     'CHAR' : 'CHAR',
     'IN' : 'IN',
-    'true': 'true',
-    'false' : 'false',
+    'TRUE': 'TRUE',
+    'FALSE' : 'FALSE',
     'CIRCLE': 'CIRCLE',
     'CURVE_C': 'CURVE_C',
     'CURVE_Q' : 'CURVE_Q',
@@ -44,7 +44,7 @@ class MyLexer(object):
           'DIVIDE', 'LPAREN', 'RPAREN', 'LCOMP', 'RCOMP', 'COMMA', 
           'DOTS', 'LBRACKET', 'RBRACKET', 'LSQBRACKET', 
           'RSQBRACKET', 'AMPERSON', 'BAR', 'EXC', 'ICTE', 'FCTE', 'SCTE', 
-          'CCTE', 'BCTE', 'ID') + tuple(reserved.values())
+          'CCTE', 'ID') + tuple(reserved.values())
     
     # Regular expression rules for simple tokens
     t_EQUAL = r'\='
@@ -69,8 +69,6 @@ class MyLexer(object):
     # Token matching rules are written as regexs
     t_SCTE = r'\".*\"'
     t_CCTE = r'\'[a-z]\''
-    t_BCTE = r'true|false'
-
 
     # A regular expression rule with some action code
     # Note addition of self parameter since we're in a class    
