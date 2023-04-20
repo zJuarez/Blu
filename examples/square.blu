@@ -1,4 +1,4 @@
-FUNCTION square(){
+VOID square(){
   PENDOWN
   FOR (4) {
     GO 100

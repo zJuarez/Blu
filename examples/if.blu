@@ -1,3 +1,4 @@
+BOOL money, seomething, else
 IF (money > 5){
 
 }
