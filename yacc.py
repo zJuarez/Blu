@@ -2,6 +2,81 @@ import os
 from lex import MyLexer
 from ply.yacc import yacc
 import sys
+from enum import Enum
+
+class Var(Enum):
+    ID = 1
+    KIND = 2
+    TIPO = 3
+    VAL = 4
+    DIM1 = 5
+    DIM2 = 6
+    ARGS = 7
+
+class Kind(Enum):
+    SINGLE = 1
+    ARRAY = 2
+    MATRIX = 3
+    FUNCTION = 4
+
+class Error(Enum):
+    REDECLARED_VARIABLE = 1
+    VARIABLE_NOT_DECLARED = 2
+
+def get_error_message(error, var):
+    if error == Error.REDECLARED_VARIABLE:
+        return "Error : " + f"Variable '{var}' already declared"
+    elif error == Error.VARIABLE_NOT_DECLARED:
+         return "Error : " + f"Variable '{var}' not declared before"
+    else:
+        return "Error not found"
+class SymbolTable:
+    def __init__(self, parent=None):
+        self.symbols = {}
+        self.parent = parent
+
+    def add_symbol(self, name, attributes):
+        self.symbols[name] = attributes
+    
+    def get_parent(self):
+        return self.parent
+    
+    def is_declarated_in_block(self, name):
+        return name in self.symbols
+    
+    def get_symbol(self, name):
+        symbol_table = self
+        while symbol_table:
+            if name in symbol_table.symbols:
+                return symbol_table.symbols[name]
+            symbol_table = symbol_table.parent
+        return None
+
+class VarsState:
+    def __init__(self):
+        self.curr = {}
+
+    def add_info(self, name, attributes):
+        self.curr[name] = attributes
+
+    def get_info(self, name):
+        return self.curr.get(name)
+    
+    def clear(self):
+        self.curr = {}
+    
+    def del_info(self, name):
+        del self.curr[name]
+
+    def get_curr(self):
+        return self.curr
+
+global curr_symbol_table, curr_state, args_state
+global errores 
+errores = False
+curr_symbol_table = SymbolTable()
+curr_state = VarsState()
+args_state = VarsState()
 
 lexer = MyLexer()
 lexer.build()
@@ -12,27 +87,36 @@ def p_codigo(p):
     codigo : funcion codigoP
     | estatuto codigoP
     '''
-    p[0] = 'CORRECTO'
-
+    p[0] = ('CORRECTO' if errores == False  else "INCORRECTO" , [p[1]] + [p[2]])
 def p_codigoP(p):
     '''
     codigoP : codigo
     | empty
     '''
-    p[0] = ''
+    p[0] = () if p[1] == 'empty' else p[1]
 
 def p_funcion(p):
     '''
-    funcion : FUNCTION ID args tipoFuncion bloque
+    funcion : tipoFuncion idFun args bloquefun
     '''
     p[0] = ''
 
+def p_idFun(p):
+    '''
+    idFun : ID
+    '''
+    # poner en el estado el id de la funcion
+    curr_state.add_info(Var.ID, p[1])
+
 def p_tipoFuncion(p):
     '''
-    tipoFuncion : DOTS tipo 
-    | empty
+    tipoFuncion :  tipo 
+    | VOID
     '''
-    p[0] = ''
+     # 1 almacenar el tipo de la funcion
+    curr_state.add_info(Var.TIPO, p[1])
+    # almacenar el kind function
+    curr_state.add_info(Var.KIND, Kind.FUNCTION)
 
 def p_args(p):
     '''
@@ -71,14 +155,54 @@ def p_argP(p):
     argP : LSQBRACKET RSQBRACKET argPP 
     | empty
     '''
-    p[0] = ''
+    p[0] = Kind.SINGLE if(len(p) <4) else p[3]
 
 def p_argPP(p):
     '''
     argPP : LSQBRACKET RSQBRACKET  
     | empty
     '''
+    p[0] = Kind.ARRAY if(len(p) <3) else Kind.MATRIX
+
+def p_bloquefun(p):
+    '''
+    bloquefun : lbracketfun bloquefunP rbracketfun
+    '''
     p[0] = ''
+
+def p_bloquefunP(p):
+    '''
+    bloquefunP : estatuto bloquefunP 
+    | empty
+    '''
+    p[0] = ''
+
+def p_lbracketfun(p):
+    '''
+    lbracketfun : LBRACKET
+    '''
+    # add function var to current block
+
+    # create new block
+    global curr_symbol_table
+    curr_symbol_table = SymbolTable(parent=curr_symbol_table)
+    p[0] = ''
+
+def p_rbracketfun(p):
+    '''
+    rbracketfun : RBRACKET
+    '''
+    # destroy block
+    global curr_symbol_table
+    curr_symbol_table = curr_symbol_table.get_parent() 
+    p[0] = ''
+
+def p_bloqueifP(p):
+    '''
+    bloqueifP : estatuto bloqueifP 
+    | empty
+    '''
+    p[0] = []
 
 def p_estatuto(p):
     '''
@@ -89,7 +213,7 @@ def p_estatuto(p):
     | estado
     | llamar
     '''
-    p[0] = ''
+    p[0] = p[1]
 
 def p_condicion(p):
     '''
@@ -174,36 +298,56 @@ def p_asignacionSM(p):
 
 def p_declarar(p):
     '''
-    declarar : tipo declararS declararP
+    declarar : tipo declararSimple declararP
     '''
-    p[0] = ''
+    
+    # 11 limpiar curr state ?
+    curr_state.clear()
+    p[0] = ('DECLARAR' , [p[2]] + p[3])
 
 def p_declararP(p):
     '''
-    declararP : COMMA declararS declararP
+    declararP : COMMA declararSimple declararP
     | empty
     '''
-    p[0] = ''
+    p[0] = [] if (p[1] == 'empty') else [p[2]] + p[3]
 
-def p_declararS(p):
+def p_declararSimple(p):
     '''
-    declararS : ID declararSOpciones
+    declararSimple : ID declararSimpleOpciones
     '''
-    p[0] = ''
+    # 2 almacenar el id
+    id = p[1]
+     # 3 el id ya existe ?
+    if(curr_symbol_table.is_declarated_in_block(id)):
+       p_error(get_error_message(Error.REDECLARED_VARIABLE, id))
+    else : 
+        # 10 añadir la variable a la tabla de variables
+        var = {Var.ID : id, Var.TIPO : curr_state.get_info(Var.TIPO)} | p[2]
+        curr_symbol_table.add_symbol(id, var)
+        print("añadiendo a la tabla " + str(id))
+    p[0] = var
 
-def p_declararSOpciones(p):
+def p_declararSimpleOpciones(p):
     '''
-    declararSOpciones : EQUAL expresion 
+    declararSimpleOpciones : EQUAL expresion 
     | declararArray 
     | empty
     '''
-    p[0] = ''
+    # esta inicializando la variable
+    if len(p) > 2:
+        # 9 guardar el valor de la variable declarada
+        p[0] = {Var.VAL : p[2]}
+        # TODO : Verificar que el el tipo de la expresion y de la variable sean iguales TYPE_MISMATCH
+    else:
+        p[0] = p[1] if(p[1] != 'empty') else {}
 
 def p_declararArray(p):
     '''
     declararArray : LSQBRACKET ICTE RSQBRACKET declararArrayP
     '''
-    p[0] = ''
+    # 4 La primera dimension del arreglo o matriz es de tamaño p[2]
+    p[0] = {Var.DIM1: p[2]} | p[4]
 
 def p_declararArrayP(p):
     '''
@@ -211,21 +355,43 @@ def p_declararArrayP(p):
     | inicializaArray 
     | empty
     '''
-    p[0] = ''
+    var = {}
+    # esta declarando una matriz
+    if(len(p) > 2):
+        # 5 La segunda dimension de la matriz es de tamaño p[2]
+        var|={Var.DIM2 : p[2]}
+        # 7 establecer que se declara un MATRIX
+        var|={Var.KIND : Kind.MATRIX}
+        # puede tener valor
+        var|=p[4]
+    else:
+        # 6 establecer que se declara un array
+        var|={Var.KIND : Kind.ARRAY}
+        # se inicializo el array
+        if p[1] != 'empty':
+            var|= p[1]
+
+    p[0] = var
 
 def p_declararArrayPP(p):
     '''
     declararArrayPP : inicializaArray 
     | empty
     '''
-    p[0] = ''
+    p[0] = p[1] if p[1] != 'empty' else {}
 
 def p_inicializaArray(p):
     '''
     inicializaArray : EQUAL acte 
     | empty
     '''
-    p[0] = ''
+    # esta inicializando el array
+    if p[1] != 'empty':
+        # 8 guardar el valor del array o matriz TODO p[2]
+        # por mientras guardar otra cosa
+        p[0] = {Var.VAL: 'mi valor es un array o matriz'}
+    else:
+        p[0] = {}
 
 def p_cte(p):
     '''
@@ -267,7 +433,7 @@ def p_acte(p):
     '''
     acte : LSQBRACKET acteP RSQBRACKET
     '''
-    p[0] = ''
+    p[0] = p[1]
 
 def p_acteP(p):
     '''
@@ -351,17 +517,38 @@ def p_tipo(p):
     | CHAR
     | BOOL
     '''
+     # 1 almacenar el tipo de la variable
+    curr_state.add_info(Var.TIPO, p[1])
+    p[0] = p[1]
+
+def p_bloqueif(p):
+    '''
+    bloqueif : lbracketif bloqueP rbracketif
+    '''
     p[0] = ''
 
-def p_bloque(p):
+def p_lbracketif(p):
     '''
-    bloque : LBRACKET bloqueP RBRACKET
+    lbracketif : LBRACKET
     '''
+    # create new block
+    global curr_symbol_table
+    curr_symbol_table = SymbolTable(parent=curr_symbol_table)
     p[0] = ''
 
-def p_bloqueP(p):
+def p_rbracketif(p):
     '''
-    bloqueP : estatuto bloqueP 
+    rbracketif : RBRACKET
+    '''
+    # destroy block
+    global curr_symbol_table
+    curr_symbol_table = curr_symbol_table.get_parent() 
+    
+    p[0] = ''
+
+def p_bloqueifP(p):
+    '''
+    bloqueifP : estatuto bloqueifP 
     | empty
     '''
     p[0] = ''
@@ -464,6 +651,12 @@ def p_var(p):
     '''
     var : ID varP
     '''
+    # 1 si el id no existe error
+    symbol = curr_symbol_table.get_symbol(p[1])
+    if (symbol is None):
+         p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, p[1]))
+    
+    # devolver algo interesante
     p[0] = ''
 
 def p_varP(p):
@@ -507,23 +700,39 @@ def p_varPArrayP(p):
     '''
     p[0] = ''
 
+# TODO CHECK
+
+def p_bloque(p):
+    '''
+    bloque : LBRACKET bloqueP RBRACKET
+    '''
+    p[0] = ''
+
+def p_bloqueP(p):
+    '''
+    bloqueP : estatuto bloqueP 
+    | empty
+    '''
+    p[0] = ''
+
 def p_empty(p):
     '''
     empty : 
     '''
-    p[0] = ''
+    p[0] = 'empty'
+
+def p_error(p):
+    global errores
+    errores = True
+    print(p)
 
 # Build the parser
 parser = yacc()
 
-files = sys.argv[1:] if len(sys.argv) > 1 else os.listdir('examples')
-
-for fileName in files:
-    with open("examples/" + fileName) as file:
-        print(fileName)
-        print('---')
-        data = file.read()
-        ast = parser.parse(data)
-        print(ast)
-        print('---')
-
+def run(code):
+    global errores, curr_symbol_table, curr_state, args_state
+    errores = False
+    curr_symbol_table = SymbolTable()
+    curr_state = VarsState()
+    args_state = VarsState()
+    return parser.parse(code)

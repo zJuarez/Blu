@@ -31,6 +31,7 @@ class MyLexer(object):
     'STRING' : 'STRING',
     'BOOL' : 'BOOL',
     'CHAR' : 'CHAR',
+    'VOID' : 'VOID',
     'IN' : 'IN',
     'TRUE': 'TRUE',
     'FALSE' : 'FALSE',
