@@ -41,6 +41,10 @@ class SymbolTable:
     def add_symbol(self, name, attributes):
         self.symbols[name] = attributes
     
+    # know for a fact is not in dict
+    def add_symbol_object(self, symbol_object):
+        self.symbols|= symbol_object
+
     def get_parent(self):
         return self.parent
     
@@ -259,8 +263,33 @@ def p_condicionElseP(p):
 
 def p_ciclo(p):
     '''
-    ciclo : FOR LPAREN cicloCont RPAREN bloque
+    ciclo : forr LPAREN cicloCont RPAREN bloqueCiclo
     '''
+    p[0] = ''
+
+def p_bloqueCiclo(p):
+    '''
+    bloqueCiclo : LBRACKET bloqueCicloP RBRACKET
+    '''
+    # finalizar el ciclo acaba las variables del bloque del ciclo
+    global curr_symbol_table
+    curr_symbol_table = curr_symbol_table.get_parent()
+    p[0] = ''
+
+def p_bloqueCicloP(p):
+    '''
+    bloqueCicloP : estatuto bloqueCicloP 
+    | empty
+    '''
+    p[0] = ''
+
+def p_forr(p):
+    '''
+    forr : FOR
+    '''
+    # start new block
+    global curr_symbol_table
+    curr_symbol_table = SymbolTable(parent=curr_symbol_table)
     p[0] = ''
 
 def p_cicloCont(p):
@@ -270,20 +299,37 @@ def p_cicloCont(p):
     | decSimple COMMA expresion COMMA asignacionS
     | ID IN cicloArray
     '''
+    if(len(p) == 4):
+        # deducir que tipo de variable es id y que kind y agregarla
+        # usar p[3] para deducr esto
+        # TODO: por ahora solo mete el id en el bloque
+        curr_symbol_table.add_symbol(p[1], {Var.ID : p[1]})
+    elif(len(p) > 4):
+        if  type(p[1]) is str:
+            # is an id
+            symbol = {p[1] : {Var.ID: p[2], Var.TIPO : "INT", Var.KIND : Kind.SINGLE, Var.VAL : p[3]}}
+            # adding id as cont in block
+            curr_symbol_table.add_symbol_object(symbol)
     p[0] = ''
 
 def p_decSimple(p):
     '''
     decSimple : tipo ID EQUAL expresion
     '''
-    p[0] = ''
+    # TODO check type mismatch
+    symbol = {p[2] : {Var.ID: p[2], Var.TIPO : p[1], Var.KIND : Kind.SINGLE, Var.VAL : p[4]}}
+     # adding dec simple to table
+    curr_symbol_table.add_symbol_object(symbol)
+
+    p[0] = symbol
 
 def p_cicloArray(p):
     '''
     cicloArray : expresion
     | acte
     '''
-    p[0] = ''
+    # devuelve que tipo de array es
+    p[0] = {}
 
 def p_asignacion(p):
     '''
@@ -300,10 +346,19 @@ def p_asignacionP(p):
 
 def p_asignacionS(p):
     '''
-    asignacionS : ID asignacionSA EQUAL expresion
+    asignacionS : idAS asignacionSA EQUAL expresion
     '''
     p[0] = ''
 
+def p_idAS(p):
+    '''
+    idAS : ID
+    '''
+    # id debe de existir
+    if(curr_symbol_table.get_symbol(p[1]) is None):
+        # not found
+        p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, p[1]))
+    p[0] = p[1]
 def p_asignacionSA(p):
     '''
     asignacionSA : LSQBRACKET expresion RSQBRACKET asignacionSM
@@ -561,6 +616,13 @@ def p_bloqueif(p):
     '''
     p[0] = ''
 
+def p_bloqueifP(p):
+    '''
+    bloqueifP : estatuto bloqueifP 
+    | empty
+    '''
+    p[0] = ''
+
 def p_lbracketif(p):
     '''
     lbracketif : LBRACKET
@@ -580,12 +642,7 @@ def p_rbracketif(p):
     
     p[0] = ''
 
-def p_bloqueifP(p):
-    '''
-    bloqueifP : estatuto bloqueifP 
-    | empty
-    '''
-    p[0] = ''
+
 
 def p_expresion(p):
     '''
