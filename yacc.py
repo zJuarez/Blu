@@ -22,12 +22,15 @@ class Kind(Enum):
 class Error(Enum):
     REDECLARED_VARIABLE = 1
     VARIABLE_NOT_DECLARED = 2
+    DUPLICATED_ARGS = 3
 
 def get_error_message(error, var):
     if error == Error.REDECLARED_VARIABLE:
         return "Error : " + f"Variable '{var}' already declared"
     elif error == Error.VARIABLE_NOT_DECLARED:
          return "Error : " + f"Variable '{var}' not declared before"
+    elif error == Error.DUPLICATED_ARGS:
+        return "Error : Duplicated Args"
     else:
         return "Error not found"
 class SymbolTable:
@@ -71,12 +74,11 @@ class VarsState:
     def get_curr(self):
         return self.curr
 
-global curr_symbol_table, curr_state, args_state
+global curr_symbol_table, curr_state
 global errores 
 errores = False
 curr_symbol_table = SymbolTable()
 curr_state = VarsState()
-args_state = VarsState()
 
 lexer = MyLexer()
 lexer.build()
@@ -115,58 +117,78 @@ def p_tipoFuncion(p):
     '''
      # 1 almacenar el tipo de la funcion
     curr_state.add_info(Var.TIPO, p[1])
-    # almacenar el kind function
-    curr_state.add_info(Var.KIND, Kind.FUNCTION)
 
 def p_args(p):
     '''
     args : LPAREN argsS RPAREN
     '''
-    p[0] = ''
+    global curr_symbol_table
+    # traer el id de la funcion que acabamos de guardar
+    id = curr_state.get_info(Var.ID)
+    # traer el tipo de la funcion que acabamos de guardar
+    tipo = curr_state.get_info(Var.TIPO)
+    # crear los atributos de la funcion con sus args y su tipo funcion
+    function_attrs = {Var.ID : id, Var.TIPO : tipo, Var.ARGS : p[2], Var.KIND : Kind.FUNCTION}
+
+    # añadir a la tabla de simbolos actual para que pueda ser usada despues
+    curr_symbol_table.add_symbol(id, function_attrs)
+    # crear nueva tabla para el bloque de funcion con padre la tabla actual
+    curr_symbol_table = SymbolTable(parent=curr_symbol_table)
+    # los args deben de vivir dentro de este bloque -> añadir
+    for id, symbol_attrs in p[2].items():
+        curr_symbol_table.add_symbol(id, symbol_attrs)
+
+    # devolver args si acaso sirve
+    p[0] = p[2]
 
 def p_argsS(p):
     '''
     argsS : argsP 
     | empty
     '''
-    p[0] = ''
+    p[0] = {} if p[1] == 'empty' else p[1]
 
 def p_argsP(p):
     '''
     argsP : arg argsPP
     '''
-    p[0] = ''
+    repeated_keys = set(p[1].keys()) & set(p[2].keys())
+    if(repeated_keys):
+        p_error(Error.DUPLICATED_ARGS)
+    
+    p[0] = p[1] | p[2]
 
 def p_argsPP(p):
     '''
     argsPP : COMMA arg 
     | empty
     '''
-    p[0] = ''
+    p[0] = {} if p[1] == 'empty' else p[2]
 
 def p_arg(p):
     '''
     arg : tipo ID argP
     '''
-    p[0] = ''
+    var = {Var.ID : p[2], Var.TIPO : p[1]} | p[3]
+    p[0] = {p[2] : var}
 
 def p_argP(p):
     '''
     argP : LSQBRACKET RSQBRACKET argPP 
     | empty
     '''
-    p[0] = Kind.SINGLE if(len(p) <4) else p[3]
+    p[0] = {Var.KIND : Kind.SINGLE} if(len(p) <4) else p[3]
 
 def p_argPP(p):
     '''
     argPP : LSQBRACKET RSQBRACKET  
     | empty
     '''
-    p[0] = Kind.ARRAY if(len(p) <3) else Kind.MATRIX
+    p[0] = {Var.KIND : Kind.ARRAY} if(len(p) <3) else {Var.KIND : Kind.MATRIX}
 
 def p_bloquefun(p):
     '''
-    bloquefun : lbracketfun bloquefunP rbracketfun
+    bloquefun : LBRACKET bloquefunP RBRACKET
     '''
     p[0] = ''
 
@@ -318,6 +340,7 @@ def p_declararSimple(p):
     '''
     # 2 almacenar el id
     id = p[1]
+    var = {}
      # 3 el id ya existe ?
     if(curr_symbol_table.is_declarated_in_block(id)):
        p_error(get_error_message(Error.REDECLARED_VARIABLE, id))
@@ -730,9 +753,4 @@ def p_error(p):
 parser = yacc()
 
 def run(code):
-    global errores, curr_symbol_table, curr_state, args_state
-    errores = False
-    curr_symbol_table = SymbolTable()
-    curr_state = VarsState()
-    args_state = VarsState()
     return parser.parse(code)
