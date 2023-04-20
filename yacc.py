@@ -520,6 +520,7 @@ def p_idllamar(p):
     else:
         p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, p[1]))
     p[0] = p[1]
+    
 def p_llamarP(p):
     '''
     llamarP : expresion llamarPP
