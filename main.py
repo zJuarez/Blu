@@ -1,6 +1,8 @@
-from yacc import run
+from myparser import MyParser
 import sys
 import os
+
+my_parser = MyParser()
 
 files = sys.argv[1:] if len(sys.argv) > 1 else os.listdir('examples')
 
@@ -9,6 +11,6 @@ for fileName in files:
         print(fileName)
         print('---')
         data = file.read()
-        ast = run(data)
+        ast = my_parser.parse(data)
         print(ast)
         print('---')
