@@ -239,7 +239,7 @@ def p_estatuto(p):
 
 def p_condicion(p):
     '''
-    condicion : IF LPAREN expresion RPAREN bloque condicionElse
+    condicion : IF LPAREN expresion RPAREN bloqueif condicionElse
     '''
     p[0] = ''
 
@@ -252,8 +252,8 @@ def p_condicionElse(p):
 
 def p_condicionElseP(p):
     '''
-    condicionElseP : IF LPAREN expresion RPAREN bloque condicionElse
-    | bloque
+    condicionElseP : IF LPAREN expresion RPAREN bloqueif condicionElse
+    | bloqueif
     '''
     p[0] = ''
 
@@ -520,7 +520,7 @@ def p_idllamar(p):
     else:
         p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, p[1]))
     p[0] = p[1]
-    
+
 def p_llamarP(p):
     '''
     llamarP : expresion llamarPP
@@ -733,8 +733,6 @@ def p_varPArrayP(p):
     | empty
     '''
     p[0] = ''
-
-# TODO CHECK
 
 def p_bloque(p):
     '''
