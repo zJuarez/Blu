@@ -1,49 +1,50 @@
+from State import Tipo 
 class SemanticCube:
     def __init__(self):
         self.cube = {
-            "INT": {
-                "+": {"INT": "INT", "FLOAT": "FLOAT"},
-                "-": {"INT": "INT", "FLOAT": "FLOAT"},
-                "*": {"INT": "INT", "FLOAT": "FLOAT"},
-                "/": {"INT": "INT", "FLOAT": "FLOAT"},
-                "%": {"INT": "INT"},
-                ">": {"INT": "BOOL", "FLOAT": "BOOL"},
-                "<": {"INT": "BOOL", "FLOAT": "BOOL"},
-                ">=": {"INT": "BOOL", "FLOAT": "BOOL"},
-                "<=": {"INT": "BOOL", "FLOAT": "BOOL"},
-                "==": {"INT": "BOOL", "FLOAT": "BOOL"},
-                "!=": {"INT": "BOOL", "FLOAT": "BOOL"},
+            Tipo.INT: {
+                "+": {Tipo.INT: Tipo.INT, Tipo.FLOAT: Tipo.FLOAT},
+                "-": {Tipo.INT: Tipo.INT, Tipo.FLOAT: Tipo.FLOAT},
+                "*": {Tipo.INT: Tipo.INT, Tipo.FLOAT: Tipo.FLOAT},
+                "/": {Tipo.INT: Tipo.INT, Tipo.FLOAT: Tipo.FLOAT},
+                "%": {Tipo.INT: Tipo.INT},
+                ">": {Tipo.INT: Tipo.BOOL, Tipo.FLOAT: Tipo.BOOL},
+                "<": {Tipo.INT: Tipo.BOOL, Tipo.FLOAT: Tipo.BOOL},
+                ">=": {Tipo.INT: Tipo.BOOL, Tipo.FLOAT: Tipo.BOOL},
+                "<=": {Tipo.INT: Tipo.BOOL, Tipo.FLOAT: Tipo.BOOL},
+                "==": {Tipo.INT: Tipo.BOOL, Tipo.FLOAT: Tipo.BOOL},
+                "!=": {Tipo.INT: Tipo.BOOL, Tipo.FLOAT: Tipo.BOOL},
                 "&&": None,
                 "||": None
             },
-            "FLOAT": {
-                "+": {"INT": "FLOAT", "FLOAT": "FLOAT"},
-                "-": {"INT": "FLOAT", "FLOAT": "FLOAT"},
-                "*": {"INT": "FLOAT", "FLOAT": "FLOAT"},
-                "/": {"INT": "FLOAT", "FLOAT": "FLOAT"},
+            Tipo.FLOAT: {
+                "+": {Tipo.INT: Tipo.FLOAT, Tipo.FLOAT: Tipo.FLOAT},
+                "-": {Tipo.INT: Tipo.FLOAT, Tipo.FLOAT: Tipo.FLOAT},
+                "*": {Tipo.INT: Tipo.FLOAT, Tipo.FLOAT: Tipo.FLOAT},
+                "/": {Tipo.INT: Tipo.FLOAT, Tipo.FLOAT: Tipo.FLOAT},
                 "%": None,
-                ">": {"INT": "BOOL", "FLOAT": "BOOL"},
-                "<": {"INT": "BOOL", "FLOAT": "BOOL"},
-                ">=": {"INT": "BOOL", "FLOAT": "BOOL"},
-                "<=": {"INT": "BOOL", "FLOAT": "BOOL"},
-                "==": {"INT": "BOOL", "FLOAT": "BOOL"},
-                "!=": {"INT": "BOOL", "FLOAT": "BOOL"},
+                ">": {Tipo.INT: Tipo.BOOL, Tipo.FLOAT: Tipo.BOOL},
+                "<": {Tipo.INT: Tipo.BOOL, Tipo.FLOAT: Tipo.BOOL},
+                ">=": {Tipo.INT: Tipo.BOOL, Tipo.FLOAT: Tipo.BOOL},
+                "<=": {Tipo.INT: Tipo.BOOL, Tipo.FLOAT: Tipo.BOOL},
+                "==": {Tipo.INT: Tipo.BOOL, Tipo.FLOAT: Tipo.BOOL},
+                "!=": {Tipo.INT: Tipo.BOOL, Tipo.FLOAT: Tipo.BOOL},
                 "&&": None,
                 "||": None
             },
-            "STRING": {
-                "+": {"STRING" : "STRING"},
-                ">": {"STRING" : "BOOL"},
-                "<": {"STRING" : "BOOL"},
-                ">=": {"STRING" : "BOOL"},
-                "<=": {"STRING" : "BOOL"},
-                "==": {"STRING" : "BOOL"},
-                "!=": {"STRING" : "BOOL"},
+            Tipo.STRING: {
+                "+": {Tipo.STRING : Tipo.STRING},
+                ">": {Tipo.STRING : Tipo.BOOL},
+                "<": {Tipo.STRING : Tipo.BOOL},
+                ">=": {Tipo.STRING : Tipo.BOOL},
+                "<=": {Tipo.STRING : Tipo.BOOL},
+                "==": {Tipo.STRING : Tipo.BOOL},
+                "!=": {Tipo.STRING : Tipo.BOOL},
                 "&&": None,
                 "||": None
             },
-            "CHAR": {
-                "+": {"CHAR" : "STRING"},
+            Tipo.CHAR: {
+                "+": {Tipo.CHAR : Tipo.STRING},
                 "-": None,
                 "*": None,
                 "/": None,
@@ -57,15 +58,15 @@ class SemanticCube:
                 "&&": None,
                 "||": None
             },
-            "BOOL": {
+            Tipo.BOOL: {
                 ">": None,
                 "<": None,
                 ">=": None,
                 "<=": None,
-                "==": {"BOOL" : "BOOL"},
-                "!=": {"BOOL" : "BOOL"},
-                "&&": {"BOOL" : "BOOL"},
-                "||": {"BOOL" : "BOOL"},
+                "==": {Tipo.BOOL : Tipo.BOOL},
+                "!=": {Tipo.BOOL : Tipo.BOOL},
+                "&&": {Tipo.BOOL : Tipo.BOOL},
+                "||": {Tipo.BOOL : Tipo.BOOL},
                 "+": None,
                 "-": None,
                 "*": None,
@@ -84,6 +85,6 @@ class SemanticCube:
             op_row = self.cube[op1_type][operator]
             if op2_type in op_row:
                 return op_row[op2_type]
-            elif op_row is not None:
-                return op_row
-        raise Exception(f"Invalid operation: {op1_type} {operator} {op2_type}")
+            else:
+                return None
+        return None

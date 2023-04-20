@@ -1,0 +1,2 @@
+INT x = 80
+PRINT x + GET_POS_X * 0.5

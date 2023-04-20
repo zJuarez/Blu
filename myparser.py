@@ -2,6 +2,7 @@ from ply.lex import lex
 from ply.yacc import yacc
 from lex import MyLexer
 from SymbolTable import SymbolTable
+from SemanticCube import SemanticCube
 from State import *
 
 class MyParser:
@@ -14,7 +15,54 @@ class MyParser:
     def clear_state(self):
         self.errores = 0
         self.curr_symbol_table = SymbolTable()
+        # añadir valores inicales del width, color, pos, etc.
+        initialVals = initialStateSymbols()
+        for key,value in initialVals.items():
+            self.curr_symbol_table.add_symbol(key, value)
         self.curr_state = State()
+        self.PilaO = []
+        self.POper = []
+        self.Quad = []
+        self.PTypes = []
+        self.TempCount = 0
+        self.Cube = SemanticCube()
+    
+    # using stacks and creating quads
+    def handle_expresion_type(self):
+        # pop operandos
+        right_operand= self.PilaO.pop() 
+        left_operand= self.PilaO.pop() 
+        # pop tipos
+        right_Type= self.PTypes.pop()
+        left_Type= self.PTypes.pop()
+        # pop operator
+        operator= self.POper.pop()
+        # get the result type according to semnatic cube
+        res_type = self.Cube.get_type(left_Type, operator, right_Type)
+        op = {
+                        'operator' : operator,
+                        'left' : {
+                            'val' : str(left_operand),
+                            'tipo' : str(left_Type.value)
+                        },
+                        'right' : {
+                            'val' : str(right_operand),
+                            'tipo' : str(right_Type.value)
+                        }
+                    }
+        if res_type is None :
+            self.p_error(get_error_message(Error.TYPE_MISMATCH, type_mism=op))
+        else:
+            temp_var = 'z_' + str(self.TempCount)
+            self.TempCount = self.TempCount + 1
+            # create and push the quad
+            quad = (operator, left_operand, right_operand, temp_var)
+            self.Quad.append(quad)
+            print("Quad: ")
+            print(quad)
+            self.PilaO.append(temp_var) 
+            self.PTypes.append(res_type)
+
 
     def p_codigo(self, p):
         '''
@@ -149,13 +197,6 @@ class MyParser:
         self.curr_symbol_table = self.curr_symbol_table.get_parent() 
         p[0] = ''
 
-    def p_bloqueifP(self, p):
-        '''
-        bloqueifP : estatuto bloqueifP 
-        | empty
-        '''
-        p[0] = []
-
     def p_estatuto(self, p):
         '''
         estatuto : condicion
@@ -229,7 +270,7 @@ class MyParser:
             # TODO: por ahora solo mete el id en el bloque
             self.curr_symbol_table.add_symbol(p[1], {Var.ID : p[1]})
         elif(len(p) > 4):
-            if  type(p[1]) is str:
+            if  not isinstance(p[1], dict):
                 # is an id
                 symbol = {p[1] : {Var.ID: p[2], Var.TIPO : "INT", Var.KIND : Kind.SINGLE, Var.VAL : p[3]}}
                 # adding id as cont in block
@@ -349,7 +390,7 @@ class MyParser:
         declararArray : LSQBRACKET ICTE RSQBRACKET declararArrayP
         '''
         # 4 La primera dimension del arreglo o matriz es de tamaño p[2]
-        p[0] = {Var.DIM1: p[2]} | p[4]
+        p[0] = {Var.DIM1: p[2][0]} | p[4]
 
     def p_declararArrayP(self, p):
         '''
@@ -361,7 +402,7 @@ class MyParser:
         # esta declarando una matriz
         if(len(p) > 2):
             # 5 La segunda dimension de la matriz es de tamaño p[2]
-            var|={Var.DIM2 : p[2]}
+            var|={Var.DIM2 : p[2][0]}
             # 7 establecer que se declara un MATRIX
             var|={Var.KIND : Kind.MATRIX}
             # puede tener valor
@@ -403,14 +444,14 @@ class MyParser:
         | CCTE
         | bcte
         '''
-        p[0] = ''
+        p[0] = p[1]
 
     def p_bcte(self, p):
         '''
         bcte : TRUE
         | FALSE
         '''
-        p[0] = ''
+        p[0] = (p[1] == "TRUE", Tipo.BOOL)
 
     def p_ascte(self, p):
         '''
@@ -531,8 +572,9 @@ class MyParser:
         | BOOL
         '''
         # 1 almacenar el tipo de la variable
-        self.curr_state.add_info(Var.TIPO, p[1])
-        p[0] = p[1]
+        tipo = get_tipo(p[1])
+        self.curr_state.add_info(Var.TIPO, tipo)
+        p[0] = tipo
 
     def p_bloqueif(self, p):
         '''
@@ -564,8 +606,6 @@ class MyParser:
         
         p[0] = ''
 
-
-
     def p_expresion(self, p):
         '''
         expresion : expresionA expresionP
@@ -574,10 +614,19 @@ class MyParser:
 
     def p_expresionP(self, p):
         '''
-        expresionP : BAR BAR expresionA expresionP 
+        expresionP : orOp expresionA expresionP 
         | empty
         '''
         p[0] = ''
+    
+    def p_orOp(self,p):
+        '''
+        orOp : BAR BAR
+        '''
+        if self.POper and (self.POper[-1] == '||'):
+           self.handle_expresion_type()
+        self.POper.append('||')
+        p[0] = p[1]
 
     def p_expresionA(self, p):
         '''
@@ -587,42 +636,70 @@ class MyParser:
 
     def p_expresionAP(self, p):
         '''
-        expresionAP : AMPERSON AMPERSON expresionB expresionAP
+        expresionAP : andOp expresionB expresionAP
         | empty
         '''
         p[0] = ''
+    
+    def p_andOp(self, p):
+        '''
+        andOp : AMPERSON AMPERSON
+        '''
+        if self.POper and (self.POper[-1] == '&&'):
+           self.handle_expresion_type()
+        self.POper.append('&&')
+        p[0] = p[1]
 
     def p_expresionB(self, p):
         '''
-        expresionB : exp op exp
+        expresionB : exp relOp exp
         | exp
         '''
+        if(len(p)> 2):
+            self.POper.append(p[2])
+            self.handle_expresion_type()
         p[0] = ''
 
-    def p_op(self, p):
+    def p_relOp(self, p):
         '''
-        op : LCOMP
+        relOp : LCOMP
         | RCOMP
         | LCOMP EQUAL
         | RCOMP EQUAL
         | EQUAL EQUAL
         | EXC EQUAL
         '''
-        p[0] = ''
+        op = p[1]
+        if(len(p) == 3):
+            op = p[1] + p[2]
+        p[0] = op
 
     def p_exp(self, p):
         '''
         exp : termino expP 
         '''
+        # exp acaba debe de estar evaluada!
+        # checar si quedan operaciones por hacer!
+        while (self.POper):
+            self.handle_expresion_type() 
         p[0] = ''
 
     def p_expP(self, p):
         '''
-        expP : PLUS exp
-        | MINUS exp 
+        expP : terminoOp termino 
         | empty
         '''
         p[0] = ''
+    
+    def p_terminoOp(self,p):
+        '''
+        terminoOp : PLUS 
+        | MINUS 
+        '''
+        if self.POper and (self.POper[-1] == '+' or self.POper[-1] == '-'):
+           self.handle_expresion_type()
+        self.POper.append(p[1])
+        p[0] = p[1]
 
     def p_termino(self, p):
         '''
@@ -632,11 +709,21 @@ class MyParser:
 
     def p_terminoP(self, p):
         '''
-        terminoP : TIMES termino
-        | DIVIDE termino 
+        terminoP : factorOp factor
         | empty
         '''
         p[0] = ''
+    
+    def p_factorOp(self,p):
+        '''
+        factorOp : TIMES 
+        | DIVIDE
+        '''
+        if self.POper and (self.POper[-1] == '*' or self.POper[-1] == '/'):
+           self.handle_expresion_type()
+
+        self.POper.append(p[1])
+        p[0] = p[1]
 
     def p_getEstado(self, p):
         '''
@@ -649,16 +736,36 @@ class MyParser:
         | GET_WIDTH
         | GET_ORIENTATION
         '''
-        p[0] = ''
+        # append el id de la expresion a la pila 
+        self.PilaO.append(p[1])
+        # append el tipo
+        symbol = self.curr_symbol_table.get_symbol(p[1])
+        self.PTypes.append(symbol[Var.TIPO])
+        p[0] = p[1]
 
     def p_factor(self, p):
         '''
-        factor : cte
+        factor : cteE
         | var
         | getEstado
         | LPAREN expresion RPAREN
         '''
         p[0] = ''
+
+    def p_cteE(self, p):
+        '''
+        cteE : ICTE 
+        | FCTE
+        | SCTE
+        | CCTE
+        | bcte
+        '''
+        # forma (Var.Val, Var.Tipo)
+        # append el id de la expresion a la pila 
+        self.PilaO.append(p[1][0])
+        # append el tipo
+        self.PTypes.append(p[1][1])
+        p[0] = p[1] 
 
     def p_var(self, p):
         '''
@@ -669,6 +776,10 @@ class MyParser:
         if (symbol is None):
             self.p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, p[1]))
         
+        # append el id de la expresion a la pila 
+        self.PilaO.append(p[1])
+        # append el tipo
+        self.PTypes.append(symbol[Var.TIPO])
         # devolver algo interesante
         p[0] = ''
 

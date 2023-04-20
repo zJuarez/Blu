@@ -1,5 +1,5 @@
 import ply.lex as lex
-
+from State import Var, Tipo
 class MyLexer(object):
     # --- Tokenizer
     reserved = {
@@ -44,7 +44,7 @@ class MyLexer(object):
     tokens = ( 'EQUAL', 'PLUS', 'MINUS', 'TIMES', 
           'DIVIDE', 'LPAREN', 'RPAREN', 'LCOMP', 'RCOMP', 'COMMA', 
           'DOTS', 'LBRACKET', 'RBRACKET', 'LSQBRACKET', 
-          'RSQBRACKET', 'AMPERSON', 'BAR', 'EXC', 'ICTE', 'FCTE', 'SCTE', 
+          'RSQBRACKET', 'AMPERSON', 'PERCENT', 'BAR', 'EXC', 'ICTE', 'FCTE', 'SCTE', 
           'CCTE', 'ID') + tuple(reserved.values())
     
     # Regular expression rules for simple tokens
@@ -64,25 +64,32 @@ class MyLexer(object):
     t_LSQBRACKET = r'\['
     t_RSQBRACKET = r'\]'
     t_AMPERSON = r'\&'
+    t_PERCENT = r'\%'
     t_BAR = r'\|'
     t_EXC = r'\!'
-
-    # Token matching rules are written as regexs
-    t_SCTE = r'\".*\"'
-    t_CCTE = r'\'[a-z]\''
 
     # A regular expression rule with some action code
     # Note addition of self parameter since we're in a class    
     def t_FCTE(self,t):
         r'[0-9]+\.[0-9]+'
-        t.value = float(t.value)    
+        t.value = (float(t.value), Tipo.FLOAT)
         return t
     
     def t_ICTE(self,t):
         r'[0-9]+'
-        t.value = int(t.value)    
+        t.value = (int(t.value), Tipo.INT)
         return t
     
+    def t_CCTE(self,t):
+        r'\'[a-z]\''
+        t.value = (t.value, Tipo.CHAR)
+        return t
+    
+    def t_SCTE(self,t):
+        r'\".*\"'
+        t.value = (t.value, Tipo.STRING)
+        return t
+
     def t_ID(self,t):
         r'[a-zA-Z_][a-zA-Z_0-9]*'
         t.type = self.reserved.get(t.value,'ID')    # Check for reserved words
