@@ -506,10 +506,20 @@ def p_printP(p):
 def p_llamar(p):
     '''
     llamar : drawFunc
-    | ID LPAREN llamarP RPAREN 
+    | idllamar LPAREN llamarP RPAREN 
     '''
     p[0] = ''
 
+def p_idllamar(p):
+    '''
+    idllamar : ID
+    '''
+    # function exists -> its declared before in any other higher block
+    if (curr_symbol_table.get_symbol(p[1])):
+        curr_state.add_info(Var.ID, p[1])
+    else:
+        p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, p[1]))
+    p[0] = p[1]
 def p_llamarP(p):
     '''
     llamarP : expresion llamarPP
