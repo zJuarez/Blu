@@ -58,8 +58,6 @@ class MyParser:
             # create and push the quad
             quad = (operator, left_operand, right_operand, temp_var)
             self.Quad.append(quad)
-            print("Quad: ")
-            print(quad)
             self.PilaO.append(temp_var) 
             self.PTypes.append(res_type)
 
@@ -313,6 +311,28 @@ class MyParser:
         '''
         asignacionS : idAS asignacionSA EQUAL expresion
         '''
+        var_id = p[1]
+        var_symbol = self.curr_symbol_table.get_symbol(var_id)
+        # should be idAS checks for vars not declared
+        if(var_symbol is not None):
+            var_type = var_symbol[Var.TIPO]
+            # expression type should be in the top of the stack of expressions
+            if self.PTypes and self.PilaO:
+                exp_type = self.PTypes.pop()
+                if(var_type == exp_type):
+                    # same type! create quad
+                    self.Quad.append(("=", self.PilaO.pop(), '',var_id))
+                elif(var_type == Tipo.INT and exp_type == Tipo.FLOAT):
+                    # TODO Ask about casts
+                    self.Quad.append(("=", self.PilaO.pop(), '',var_id))
+                elif(var_type == Tipo.FLOAT and exp_type == Tipo.INT):
+                    # Ask about casts
+                    self.Quad.append(("=", self.PilaO.pop(), '',var_id))
+                else:
+                    self.p_error(self.get_error_message(Error.TYPE_MISMATCH))
+            else:
+                self.p_error(get_error_message(Error.EXPRESSION_WENT_WRONG))
+            
         p[0] = ''
 
     def p_idAS(self, p):
@@ -324,6 +344,7 @@ class MyParser:
             # not found
             self.p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, p[1]))
         p[0] = p[1]
+
     def p_asignacionSA(self, p):
         '''
         asignacionSA : LSQBRACKET expresion RSQBRACKET asignacionSM
@@ -686,7 +707,7 @@ class MyParser:
 
     def p_expP(self, p):
         '''
-        expP : terminoOp termino 
+        expP : terminoOp exp 
         | empty
         '''
         p[0] = ''
@@ -709,7 +730,7 @@ class MyParser:
 
     def p_terminoP(self, p):
         '''
-        terminoP : factorOp factor
+        terminoP : factorOp termino
         | empty
         '''
         p[0] = ''
@@ -723,24 +744,6 @@ class MyParser:
            self.handle_expresion_type()
 
         self.POper.append(p[1])
-        p[0] = p[1]
-
-    def p_getEstado(self, p):
-        '''
-        getEstado : GET_POS_X
-        | GET_POS_Y
-        | GET_BG
-        | GET_COLOR
-        | IS_PENDOWN
-        | IS_PENUP
-        | GET_WIDTH
-        | GET_ORIENTATION
-        '''
-        # append el id de la expresion a la pila 
-        self.PilaO.append(p[1])
-        # append el tipo
-        symbol = self.curr_symbol_table.get_symbol(p[1])
-        self.PTypes.append(symbol[Var.TIPO])
         p[0] = p[1]
 
     def p_factor(self, p):
@@ -782,6 +785,25 @@ class MyParser:
         self.PTypes.append(symbol[Var.TIPO])
         # devolver algo interesante
         p[0] = ''
+
+    def p_getEstado(self, p):
+        '''
+        getEstado : GET_POS_X
+        | GET_POS_Y
+        | GET_BG
+        | GET_COLOR
+        | IS_PENDOWN
+        | IS_PENUP
+        | GET_WIDTH
+        | GET_ORIENTATION
+        '''
+        # append el id de la expresion a la pila 
+        self.PilaO.append(p[1])
+        # append el tipo
+        symbol = self.curr_symbol_table.get_symbol(p[1])
+        self.PTypes.append(symbol[Var.TIPO])
+        p[0] = p[1]
+
 
     def p_varP(self, p):
         '''
@@ -850,4 +872,5 @@ class MyParser:
     def parse(self, text):
         self.clear_state()
         result = self.parser.parse(text, lexer=self.lexer.lexer)
+        print(self.Quad)
         return result

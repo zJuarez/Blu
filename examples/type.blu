@@ -1,2 +1,3 @@
 INT x = 80
-PRINT x + GET_POS_X * 0.5
+STRING y = "hello world"
+x = 70 * 80 / 4 + 20 + y

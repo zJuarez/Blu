@@ -52,6 +52,7 @@ class Error(Enum):
     VARIABLE_NOT_DECLARED = 2
     DUPLICATED_ARGS = 3
     TYPE_MISMATCH = 4
+    EXPRESSION_WENT_WRONG = 5
 
 def get_error_message(error, var = '', type_mism = {}):
     if error == Error.REDECLARED_VARIABLE:
@@ -62,6 +63,8 @@ def get_error_message(error, var = '', type_mism = {}):
         return "Error : Duplicated Args"
     elif error == Error.TYPE_MISMATCH:
         return "Error :  Type Mismatch " + f"Using '{type_mism['operator']}' with var '{type_mism['left']['val']}' of type '{type_mism['left']['tipo']}' and '{type_mism['right']['val']}' of type '{type_mism['right']['tipo']}'"
+    elif error == Error.EXPRESSION_WENT_WRONG:
+        return "Error : Expression went wrong"
     else:
         return "Error not found"
     
