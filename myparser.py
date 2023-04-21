@@ -29,37 +29,41 @@ class MyParser:
     
     # using stacks and creating quads
     def handle_expresion_type(self):
-        # pop operandos
-        right_operand= self.PilaO.pop() 
-        left_operand= self.PilaO.pop() 
-        # pop tipos
-        right_Type= self.PTypes.pop()
-        left_Type= self.PTypes.pop()
-        # pop operator
-        operator= self.POper.pop()
-        # get the result type according to semnatic cube
-        res_type = self.Cube.get_type(left_Type, operator, right_Type)
-        op = {
-                        'operator' : operator,
-                        'left' : {
-                            'val' : str(left_operand),
-                            'tipo' : str(left_Type.value)
-                        },
-                        'right' : {
-                            'val' : str(right_operand),
-                            'tipo' : str(right_Type.value)
+        print(self.PilaO)
+        print(self.PTypes)
+        print(self.POper)
+        if self.PilaO and self.PTypes and self.POper:   
+            # pop operandos
+            right_operand= self.PilaO.pop() 
+            left_operand= self.PilaO.pop() 
+            # pop tipos
+            right_Type= self.PTypes.pop()
+            left_Type= self.PTypes.pop()
+            # pop operator
+            operator= self.POper.pop()
+            # get the result type according to semnatic cube
+            res_type = self.Cube.get_type(left_Type, operator, right_Type)
+            op = {
+                            'operator' : operator,
+                            'left' : {
+                                'val' : str(left_operand),
+                                'tipo' : str(left_Type.value)
+                            },
+                            'right' : {
+                                'val' : str(right_operand),
+                                'tipo' : str(right_Type.value)
+                            }
                         }
-                    }
-        if res_type is None :
-            self.p_error(get_error_message(Error.TYPE_MISMATCH, type_mism=op))
-        else:
-            temp_var = 'z_' + str(self.TempCount)
-            self.TempCount = self.TempCount + 1
-            # create and push the quad
-            quad = (operator, left_operand, right_operand, temp_var)
-            self.Quad.append(quad)
-            self.PilaO.append(temp_var) 
-            self.PTypes.append(res_type)
+            if res_type is None :
+                self.p_error(get_error_message(Error.TYPE_MISMATCH, type_mism=op))
+            else:
+                temp_var = 'z_' + str(self.TempCount)
+                self.TempCount = self.TempCount + 1
+                # create and push the quad
+                quad = (operator, left_operand, right_operand, temp_var)
+                self.Quad.append(quad)
+                self.PilaO.append(temp_var) 
+                self.PTypes.append(res_type)
 
 
     def p_codigo(self, p):
@@ -682,12 +686,18 @@ class MyParser:
 
     def p_expresionB(self, p):
         '''
-        expresionB : exp relOp exp
-        | exp
+        expresionB : exp expresionBP
         '''
         if(len(p)> 2):
             self.POper.append(p[2])
             self.handle_expresion_type()
+        p[0] = ''
+    
+    def p_expresionBP(self, p):
+        '''
+        expresionBP : relOp exp
+        | empty
+        '''
         p[0] = ''
 
     def p_relOp(self, p):
