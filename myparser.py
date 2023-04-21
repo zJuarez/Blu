@@ -688,9 +688,6 @@ class MyParser:
         '''
         expresionB : exp expresionBP
         '''
-        if(len(p)> 2):
-            self.POper.append(p[2])
-            self.handle_expresion_type()
         p[0] = ''
     
     def p_expresionBP(self, p):
@@ -698,6 +695,10 @@ class MyParser:
         expresionBP : relOp exp
         | empty
         '''
+        if(len(p)> 2):
+            if(self.POper and (self.POper[-1] == '&&' or self.POper[-1] == '||')):
+                self.POper.append(p[1])
+                self.handle_expresion_type()
         p[0] = ''
 
     def p_relOp(self, p):
@@ -719,8 +720,8 @@ class MyParser:
         exp : termino expP 
         '''
         # exp acaba debe de estar evaluada!
-        # checar si quedan operaciones por hacer!
-        while (self.POper):
+        # checar si quedan operaciones aritmeticas por hacer!
+        while (self.POper and (self.POper[-1] == '+' or self.POper[-1] == '-' or self.POper[-1] == '/' or self.POper[-1] == '*')):
             self.handle_expresion_type() 
         p[0] = ''
 
