@@ -222,7 +222,7 @@ class MyParser:
     def p_condicionElseP(self, p):
         '''
         condicionElseP : IF LPAREN expresion RPAREN bloqueif condicionElse
-        | bloqueif
+        | bloqueElse
         '''
         p[0] = ''
 
@@ -600,6 +600,15 @@ class MyParser:
     def p_bloqueif(self, p):
         '''
         bloqueif : lbracketif bloqueP rbracketif
+        '''
+        # verificar que la expresion que acabamos de pasar es booleana
+        if self.PTypes and self.PTypes[-1] != Tipo.BOOL:
+            self.p_error(get_error_message(Error.IF_EXPRESSION_MUST_BE_BOOL))
+        p[0] = ''
+    
+    def p_bloqueElse(self, p):
+        '''
+        bloqueElse : lbracketif bloqueP rbracketif
         '''
         p[0] = ''
 
