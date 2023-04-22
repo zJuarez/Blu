@@ -270,11 +270,11 @@ class MyParser:
             # deducir que tipo de variable es id y que kind y agregarla
             # usar p[3] para deducr esto
             # TODO: por ahora solo mete el id en el bloque
-            self.curr_symbol_table.add_symbol(p[1], {Var.ID : p[1]})
+            self.curr_symbol_table.add_symbol(p[1], {Var.ID : p[1], Var.TIPO : Tipo.INT})
         elif(len(p) > 4):
             if  not isinstance(p[1], dict):
                 # is an id
-                symbol = {p[1] : {Var.ID: p[2], Var.TIPO : "INT", Var.KIND : Kind.SINGLE, Var.VAL : p[3]}}
+                symbol = {p[1] : {Var.ID: p[1], Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : p[3]}}
                 # adding id as cont in block
                 self.curr_symbol_table.add_symbol_object(symbol)
         p[0] = ''

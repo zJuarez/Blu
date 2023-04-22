@@ -1,5 +1,6 @@
-BOOL money, c
-IF(money > 5){
+INT money = 8
+BOOL c
+IF(money > 8){
     INT money = 4
     money = 4 + money
 }
