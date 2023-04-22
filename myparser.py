@@ -719,10 +719,6 @@ class MyParser:
         '''
         exp : termino expP 
         '''
-        # exp acaba debe de estar evaluada!
-        # checar si quedan operaciones aritmeticas por hacer!
-        while (self.POper and (self.POper[-1] == '+' or self.POper[-1] == '-' or self.POper[-1] == '/' or self.POper[-1] == '*')):
-            self.handle_expresion_type() 
         p[0] = ''
 
     def p_expP(self, p):
@@ -737,8 +733,6 @@ class MyParser:
         terminoOp : PLUS 
         | MINUS 
         '''
-        if self.POper and (self.POper[-1] == '+' or self.POper[-1] == '-'):
-           self.handle_expresion_type()
         self.POper.append(p[1])
         p[0] = p[1]
 
@@ -746,6 +740,8 @@ class MyParser:
         '''
         termino : factor terminoP 
         '''
+        if self.POper and (self.POper[-1] == '+' or self.POper[-1] == '-'):
+           self.handle_expresion_type()
         p[0] = ''
 
     def p_terminoP(self, p):
@@ -760,9 +756,6 @@ class MyParser:
         factorOp : TIMES 
         | DIVIDE
         '''
-        if self.POper and (self.POper[-1] == '*' or self.POper[-1] == '/'):
-           self.handle_expresion_type()
-
         self.POper.append(p[1])
         p[0] = p[1]
 
@@ -773,6 +766,8 @@ class MyParser:
         | getEstado
         | LPAREN expresion RPAREN
         '''
+        if self.POper and (self.POper[-1] == '*' or self.POper[-1] == '/'):
+            self.handle_expresion_type()
         p[0] = ''
 
     def p_cteE(self, p):
