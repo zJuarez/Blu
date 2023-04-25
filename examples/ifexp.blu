@@ -1,6 +1,6 @@
-IF(TRUE || 8<9){
+IF(8<9){
 
-}ELSE IF(8 < 9){
+}ELSE IF(10 < 11){
 
 }ELSE{
 

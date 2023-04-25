@@ -696,9 +696,8 @@ class MyParser:
         | empty
         '''
         if(len(p)> 2):
-            if(self.POper and (self.POper[-1] == '&&' or self.POper[-1] == '||')):
-                self.POper.append(p[1])
-                self.handle_expresion_type()
+            self.POper.append(p[1])
+            self.handle_expresion_type()
         p[0] = ''
 
     def p_relOp(self, p):
