@@ -9,7 +9,7 @@ ELSE IF (money >= 2 && money <= 4){
 }ELSE IF(money > 0){
 
 }ELSE{
-    IF(c || c){
+    IF(c || c && c){
         
     }
 

@@ -29,9 +29,9 @@ class MyParser:
     
     # using stacks and creating quads
     def handle_expresion_type(self):
-        print(self.PilaO)
-        print(self.PTypes)
-        print(self.POper)
+        #print(self.PilaO)
+        #print(self.PTypes)
+        #print(self.POper)
         if self.PilaO and self.PTypes and self.POper:   
             # pop operandos
             right_operand= self.PilaO.pop() 
@@ -212,8 +212,17 @@ class MyParser:
 
     def p_condicion(self, p):
         '''
-        condicion : IF LPAREN expresion RPAREN bloqueif condicionElse
+        condicion : IF LPAREN expresion RPAREN checkExp bloqueif condicionElse
         '''
+        p[0] = ''
+    
+    def p_checkExp(self,p):
+        '''
+        checkExp : empty
+        '''
+         # verificar que la expresion que acabamos de pasar es booleana
+        if self.PTypes and self.PTypes[-1] != Tipo.BOOL:
+            self.p_error(get_error_message(Error.IF_EXPRESSION_MUST_BE_BOOL))
         p[0] = ''
 
     def p_condicionElse(self, p):
@@ -225,7 +234,7 @@ class MyParser:
 
     def p_condicionElseP(self, p):
         '''
-        condicionElseP : IF LPAREN expresion RPAREN bloqueif condicionElse
+        condicionElseP : IF LPAREN expresion RPAREN checkExp bloqueif condicionElse
         | bloqueElse
         '''
         p[0] = ''
@@ -333,7 +342,7 @@ class MyParser:
                     # Ask about casts
                     self.Quad.append(("=", self.PilaO.pop(), '',var_id))
                 else:
-                    self.p_error(self.get_error_message(Error.TYPE_MISMATCH))
+                    self.p_error(get_error_message(Error.TYPE_MISMATCH))
             else:
                 self.p_error(get_error_message(Error.EXPRESSION_WENT_WRONG))
             
@@ -393,7 +402,7 @@ class MyParser:
             # 10 añadir la variable a la tabla de variables
             var = {Var.ID : id, Var.TIPO : self.curr_state.get_info(Var.TIPO)} | p[2]
             self.curr_symbol_table.add_symbol(id, var)
-            print("añadiendo a la tabla " + str(id))
+            # print("añadiendo a la tabla " + str(id))
         p[0] = var
 
     def p_declararSimpleOpciones(self, p):
@@ -605,9 +614,6 @@ class MyParser:
         '''
         bloqueif : lbracketif bloqueP rbracketif
         '''
-        # verificar que la expresion que acabamos de pasar es booleana
-        if self.PTypes and self.PTypes[-1] != Tipo.BOOL:
-            self.p_error(get_error_message(Error.IF_EXPRESSION_MUST_BE_BOOL))
         p[0] = ''
     
     def p_bloqueElse(self, p):
@@ -644,6 +650,8 @@ class MyParser:
         '''
         expresion : expresionA expresionP
         '''
+        if self.POper and (self.POper[-1] == '||'):
+           self.handle_expresion_type()
         p[0] = ''
 
     def p_expresionP(self, p):
@@ -666,6 +674,8 @@ class MyParser:
         '''
         expresionA : expresionB expresionAP
         '''
+        if self.POper and (self.POper[-1] == '&&'):
+           self.handle_expresion_type()
         p[0] = ''
 
     def p_expresionAP(self, p):
@@ -880,11 +890,16 @@ class MyParser:
         p[0] = 'empty'
 
     def p_error(self, p):
-        self.errores = self.errores + 1
-        print(p)
+        raise Exception(p)
 
     def parse(self, text):
         self.clear_state()
-        result = self.parser.parse(text, lexer=self.lexer.lexer)
-        print(self.Quad)
-        return result
+        try: 
+            result = self.parser.parse(text, lexer=self.lexer.lexer)
+            for i,quad in enumerate(self.Quad):
+                print(str(i) + ". " + str(quad)) 
+            return result
+        except Exception as e:
+            print(e)
+            return e
+        
