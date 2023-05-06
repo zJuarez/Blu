@@ -30,6 +30,11 @@ class MyParser:
         self.PGoto = []
         self.PGotoF = []
     
+    def get_next_temp(self):
+        temp_var = 'z_' + str(self.TempCount)
+        self.TempCount = self.TempCount + 1
+        return temp_var
+    
     # using stacks and creating quads
     def handle_expresion_type(self):
         #print(self.PilaO)
@@ -60,8 +65,7 @@ class MyParser:
             if res_type is None :
                 self.p_error(get_error_message(Error.TYPE_MISMATCH, type_mism=op))
             else:
-                temp_var = 'z_' + str(self.TempCount)
-                self.TempCount = self.TempCount + 1
+                temp_var = self.get_next_temp()
                 # create and push the quad
                 quad = (operator, left_operand, right_operand, temp_var)
                 self.Quad.append(quad)
@@ -346,7 +350,7 @@ class MyParser:
         '''
         # al final del ciclo tienes que rellenar gotof
         if self.PSaltosFor:
-            self.Quad[self.PSaltosFor.pop()]+=(len(self.Quad),)
+            self.Quad[self.PSaltosFor.pop()]+=(len(self.Quad) + 1,)
         else:
         # weird mistake. should have gotof in the stack
             self.p_error(get_error_message(999))
@@ -402,16 +406,14 @@ class MyParser:
             # dejar migaja de pan para volver despues a asignar y evaluar
             self.PSaltosFor.append(len(self.Quad))
 
-            temp_var_suma = 'z_' + str(self.TempCount)
-            self.TempCount = self.TempCount + 1
+            temp_var_suma = self.get_next_temp()
 
             # generar quads de suma temp
             self.Quad.append(("+", temp_var, 1, temp_var_suma))
             # generar quad de asignacion
             self.Quad.append(("=", temp_var_suma, '',temp_var))
 
-            temp_var_bool = 'z_' + str(self.TempCount)
-            self.TempCount = self.TempCount + 1
+            temp_var_bool = self.get_next_temp()
 
             # generar quad de expresion
             sup_limit = p[1][0]
@@ -423,12 +425,32 @@ class MyParser:
             self.PSaltosFor.append(len(self.Quad) - 1)
 
 
-        # loop from [x,y]
+        # loop from [x,y] usig id
+        # p[1] is a string = id
         if len(p) == 6 and not isinstance(p[1], dict):
-           # is an id
-            symbol = {p[1] : {Var.ID: p[1], Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : p[3]}}
+            id = p[1]
+            # -1 cause we'll add 1 right away
+            symbol = {id : {Var.ID: id, Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : p[3][0] - 1}}
             # adding id as cont in block
             self.curr_symbol_table.add_symbol_object(symbol)
+            # dejar migaja de pan para volver despues a asignar y evaluar
+            self.PSaltosFor.append(len(self.Quad))
+            
+            temp_var_suma = self.get_next_temp()
+
+            # generar quads de suma temp
+            self.Quad.append(("+", id, 1, temp_var_suma))
+             # generar quad de asignacion
+            self.Quad.append(("=", temp_var_suma, '',id))
+            temp_var_bool = self.get_next_temp()
+
+            # generar quad de expresion
+            sup_limit = p[5][0]
+            self.Quad.append(("<=", id, sup_limit, temp_var_bool))
+            # generar gotof, luego rellenamos
+            self.Quad.append(("GOTOF", temp_var_bool))
+            # pushear gotof que despues se rellenara con el final del for
+            self.PSaltosFor.append(len(self.Quad) - 1)
         
         # trad loop: (dec, exp, asg)
         if len(p) == 6 and isinstance(p[1], dict):
@@ -552,7 +574,7 @@ class MyParser:
 
     def p_declararSimple(self, p):
         '''
-        declararSimple : ID declararSimpleOpciones
+        declararSimple : myid declararSimpleOpciones
         '''
         # 2 almacenar el id
         id = p[1]
@@ -566,6 +588,13 @@ class MyParser:
             self.curr_symbol_table.add_symbol(id, var)
             # print("añadiendo a la tabla " + str(id))
         p[0] = var
+    
+    def p_myid(self,p):
+        '''
+        myid : ID
+        '''
+        self.curr_state.add_info(Var.ID, p[1])
+        p[0] = p[1]
 
     def p_declararSimpleOpciones(self, p):
         '''
@@ -573,11 +602,31 @@ class MyParser:
         | declararArray 
         | empty
         '''
-        # esta inicializando la variable
+        # esta inicializando la variable SIMPLE
         if len(p) > 2:
             # 9 guardar el valor de la variable declarada
-            p[0] = {Var.VAL : p[2]}
-            # TODO : Verificar que el el tipo de la expresion y de la variable sean iguales TYPE_MISMATCH
+            # el valor de la exp debe de vivir en PilaO
+            if self.PilaO and self.PTypes:
+                p[0] = {Var.VAL : self.PilaO.pop()}
+                l_type = self.curr_state.get_info(Var.TIPO)
+                l_val = self.curr_state.get_info(Var.ID)
+                r_type = self.PTypes.pop()
+                if l_type != r_type:
+                    op = {
+                            'operator' : "=",
+                            'left' : {
+                                'val' : str(l_val),
+                                'tipo' : str(l_type)
+                            },
+                            'right' : {
+                                'val' : "exp",
+                                'tipo' : str(r_type)
+                            }
+                        }
+                    self.p_error(get_error_message(Error.TYPE_MISMATCH, type_mism=op))
+            else:
+                # mistake of stacks
+                self.p_error(get_error_message(999))
         else:
             p[0] = p[1] if(p[1] != 'empty') else {}
 
@@ -710,6 +759,8 @@ class MyParser:
         '''
         print : PRINT expresion printP 
         '''
+        while self.PilaO:
+            self.Quad.append(("PRINT", self.PilaO.pop(), self.PTypes.pop()))
         p[0] = ''
 
     def p_printP(self, p):
@@ -1026,6 +1077,5 @@ class MyParser:
                 print(str(i) + ". " + str(quad)) 
             return result
         except Exception as e:
-            print(e)
             return e
         
