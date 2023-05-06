@@ -26,7 +26,7 @@ class MyParser:
         self.PTypes = []
         self.TempCount = 0
         self.Cube = SemanticCube()
-        self.PSaltos = []
+        self.PSaltosFor = []
         self.PGoto = []
         self.PGotoF = []
     
@@ -342,8 +342,21 @@ class MyParser:
 
     def p_ciclo(self, p):
         '''
-        ciclo : forr LPAREN cicloCont RPAREN bloqueCiclo
+        ciclo : myFor LPAREN cicloCont RPAREN bloqueCiclo
         '''
+        # al final del ciclo tienes que rellenar gotof
+        if self.PSaltosFor:
+            self.Quad[self.PSaltosFor.pop()]+=(len(self.Quad),)
+        else:
+        # weird mistake. should have gotof in the stack
+            self.p_error(get_error_message(999))
+
+        # crear goto a la migaja de pan para evaluar exp tra vez
+        if self.PSaltosFor:
+            self.Quad.append(("GOTO", self.PSaltosFor.pop()))
+        else:
+             # weird mistake. should have jump in the stack
+            self.p_error(get_error_message(999))
         p[0] = ''
 
     def p_bloqueCiclo(self, p):
@@ -352,7 +365,9 @@ class MyParser:
         '''
         # finalizar el ciclo acaba las variables del bloque del ciclo
         self.curr_symbol_table = self.curr_symbol_table.get_parent()
+        
         p[0] = ''
+    
 
     def p_bloqueCicloP(self, p):
         '''
@@ -361,9 +376,9 @@ class MyParser:
         '''
         p[0] = ''
 
-    def p_forr(self, p):
+    def p_myFor(self, p):
         '''
-        forr : FOR
+        myFor : FOR
         '''
         # start new block
         self.curr_symbol_table = SymbolTable(parent=self.curr_symbol_table)
@@ -376,25 +391,71 @@ class MyParser:
         | decSimple COMMA expresion COMMA asignacionS
         | ID IN cicloArray
         '''
+        # loop X times
+        if len(p) == 2:
+            temp_var = 'invisible_id' 
+            # create invisible_id is starting in 0
+            symbol = {temp_var : {Var.ID: temp_var, Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : 0}}
+            # adding invisible id as cont in block
+            self.curr_symbol_table.add_symbol_object(symbol)
+
+            # dejar migaja de pan para volver despues a asignar y evaluar
+            self.PSaltosFor.append(len(self.Quad))
+
+            temp_var_suma = 'z_' + str(self.TempCount)
+            self.TempCount = self.TempCount + 1
+
+            # generar quads de suma temp
+            self.Quad.append(("+", temp_var, 1, temp_var_suma))
+            # generar quad de asignacion
+            self.Quad.append(("=", temp_var_suma, '',temp_var))
+
+            temp_var_bool = 'z_' + str(self.TempCount)
+            self.TempCount = self.TempCount + 1
+
+            # generar quad de expresion
+            sup_limit = p[1][0]
+            self.Quad.append(("<=", temp_var, sup_limit, temp_var_bool))
+
+            # generar gotof, luego rellenamos
+            self.Quad.append(("GOTOF", temp_var_bool))
+            # pushear gotof que despues se rellenara con el final del for
+            self.PSaltosFor.append(len(self.Quad) - 1)
+
+
+        # loop from [x,y]
+        if len(p) == 6 and not isinstance(p[1], dict):
+           # is an id
+            symbol = {p[1] : {Var.ID: p[1], Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : p[3]}}
+            # adding id as cont in block
+            self.curr_symbol_table.add_symbol_object(symbol)
+        
+        # trad loop: (dec, exp, asg)
+        if len(p) == 6 and isinstance(p[1], dict):
+            print()
+        
+        # looping arrays
         if(len(p) == 4):
             # deducir que tipo de variable es id y que kind y agregarla
             # usar p[3] para deducr esto
             # TODO: por ahora solo mete el id en el bloque
             self.curr_symbol_table.add_symbol(p[1], {Var.ID : p[1], Var.TIPO : Tipo.INT})
-        elif(len(p) > 4):
-            if  not isinstance(p[1], dict):
-                # is an id
-                symbol = {p[1] : {Var.ID: p[1], Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : p[3]}}
-                # adding id as cont in block
-                self.curr_symbol_table.add_symbol_object(symbol)
+        
         p[0] = ''
 
     def p_decSimple(self, p):
         '''
         decSimple : tipo ID EQUAL expresion
         '''
-        # TODO check type mismatch
-        symbol = {p[2] : {Var.ID: p[2], Var.TIPO : p[1], Var.KIND : Kind.SINGLE, Var.VAL : p[4]}}
+        if self.PTypes and self.PilaO:
+            tipo_exp = self.PTypes[-1] 
+            # check type mismatch
+            if p[1] != tipo_exp:
+                 self.p_error(get_error_message(Error.TYPE_MISMATCH))
+        else:
+            # weird mistake. should have type at the top of the expression
+            self.p_error(get_error_message(999))
+        symbol = {p[2] : {Var.ID: p[2], Var.TIPO : p[1], Var.KIND : Kind.SINGLE, Var.VAL : self.PilaO.top()}}
         # adding dec simple to table
         self.curr_symbol_table.add_symbol_object(symbol)
 
@@ -963,7 +1024,6 @@ class MyParser:
             result = self.parser.parse(text, lexer=self.lexer.lexer)
             for i,quad in enumerate(self.Quad):
                 print(str(i) + ". " + str(quad)) 
-            print(self.PSaltos)
             return result
         except Exception as e:
             print(e)
