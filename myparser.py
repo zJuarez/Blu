@@ -37,9 +37,6 @@ class MyParser:
     
     # using stacks and creating quads
     def handle_expresion_type(self):
-        #print(self.PilaO)
-        #print(self.PTypes)
-        #print(self.POper)
         if self.PilaO and self.PTypes and self.POper:   
             # pop operandos
             right_operand= self.PilaO.pop() 
@@ -230,7 +227,7 @@ class MyParser:
                 self.Quad[self.PGotoF.pop()] +=  (len(self.Quad),)
             else :
                 # weird mistake. should have pending gotof if not ending on else
-                self.p_error(get_error_message(999))
+                self.p_error(get_error_message(Error.INTERNAL_STACKS))
         p[0] = ''
     
     def p_checkExp(self,p):
@@ -238,7 +235,7 @@ class MyParser:
         checkExp : empty
         '''
          # verificar que la expresion que acabamos de pasar es booleana
-        if self.PTypes and self.PTypes[-1] != Tipo.BOOL:
+        if self.PTypes and self.PTypes.pop() != Tipo.BOOL:
             self.p_error(get_error_message(Error.IF_EXPRESSION_MUST_BE_BOOL))
 
         # if R paren
@@ -250,7 +247,7 @@ class MyParser:
             self.PGotoF.append(len(self.Quad) -1)
         else :
             # some weird mistake. should have an bool exp on PilaO
-            self.p_error(get_error_message(999))
+            self.p_error(get_error_message(Error.INTERNAL_STACKS))
 
         p[0] = ''
 
@@ -278,7 +275,7 @@ class MyParser:
             self.Quad[self.PGotoF.pop()] +=  (len(self.Quad),)
         else:
             # some weird mistake. should have a gotof waiting to be filled
-            self.p_error(get_error_message(999))
+            self.p_error(get_error_message(Error.INTERNAL_STACKS))
 
         p[0] = p[1]
 
@@ -315,7 +312,7 @@ class MyParser:
             self.Quad[self.PGoto.pop()] +=  (len(self.Quad),)
         else:
             # some weird mistake. should have a goto waiting to be filled
-            self.p_error(get_error_message(999))
+            self.p_error(get_error_message(Error.INTERNAL_STACKS))
         
         p[0] = p[1]
 
@@ -348,19 +345,25 @@ class MyParser:
         '''
         ciclo : myFor LPAREN cicloCont RPAREN bloqueCiclo
         '''
-        # al final del ciclo tienes que rellenar gotof
-        if self.PSaltosFor:
-            self.Quad[self.PSaltosFor.pop()]+=(len(self.Quad) + 1,)
-        else:
-        # weird mistake. should have gotof in the stack
-            self.p_error(get_error_message(999))
+
+        # una vez se acabo, meter los quads de asign
+        asigQuads = p[3]
+        self.Quad = self.Quad + asigQuads
+
+        if len(self.PSaltosFor) < 2 :
+            self.p_error(get_error_message(Error.INTERNAL_STACKS))
+
+        gotof = self.PSaltosFor.pop()
+        migaja = self.PSaltosFor.pop()
 
         # crear goto a la migaja de pan para evaluar exp tra vez
-        if self.PSaltosFor:
-            self.Quad.append(("GOTO", self.PSaltosFor.pop()))
-        else:
-             # weird mistake. should have jump in the stack
-            self.p_error(get_error_message(999))
+        self.Quad.append(("GOTO", migaja))
+
+        # al final del ciclo tienes que rellenar gotof al proximo quad a generar
+        self.Quad[gotof]+=(len(self.Quad),)
+
+
+      
         p[0] = ''
 
     def p_bloqueCiclo(self, p):
@@ -392,14 +395,15 @@ class MyParser:
         '''
         cicloCont : ICTE
         | ID COMMA ICTE COMMA ICTE
-        | decSimple COMMA expresion COMMA asignacionS
+        | decSimple COMMA forExp COMMA asignacionS
         | ID IN cicloArray
         '''
+        asigQuads = []
         # loop X times
         if len(p) == 2:
-            temp_var = 'invisible_id' 
+            invisible_var = 'invisible_var' 
             # create invisible_id is starting in 0
-            symbol = {temp_var : {Var.ID: temp_var, Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : 0}}
+            symbol = {invisible_var : {Var.ID: invisible_var, Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : 1}}
             # adding invisible id as cont in block
             self.curr_symbol_table.add_symbol_object(symbol)
 
@@ -408,16 +412,15 @@ class MyParser:
 
             temp_var_suma = self.get_next_temp()
 
-            # generar quads de suma temp
-            self.Quad.append(("+", temp_var, 1, temp_var_suma))
-            # generar quad de asignacion
-            self.Quad.append(("=", temp_var_suma, '',temp_var))
+            # Guardar los quads de asig
+            asigQuads.append(("+", invisible_var, 1, temp_var_suma))
+            asigQuads.append(("=", temp_var_suma, '',invisible_var))
 
             temp_var_bool = self.get_next_temp()
 
             # generar quad de expresion
             sup_limit = p[1][0]
-            self.Quad.append(("<=", temp_var, sup_limit, temp_var_bool))
+            self.Quad.append(("<=", invisible_var, sup_limit, temp_var_bool))
 
             # generar gotof, luego rellenamos
             self.Quad.append(("GOTOF", temp_var_bool))
@@ -429,8 +432,7 @@ class MyParser:
         # p[1] is a string = id
         if len(p) == 6 and not isinstance(p[1], dict):
             id = p[1]
-            # -1 cause we'll add 1 right away
-            symbol = {id : {Var.ID: id, Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : p[3][0] - 1}}
+            symbol = {id : {Var.ID: id, Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : p[3][0]}}
             # adding id as cont in block
             self.curr_symbol_table.add_symbol_object(symbol)
             # dejar migaja de pan para volver despues a asignar y evaluar
@@ -438,10 +440,10 @@ class MyParser:
             
             temp_var_suma = self.get_next_temp()
 
-            # generar quads de suma temp
-            self.Quad.append(("+", id, 1, temp_var_suma))
-             # generar quad de asignacion
-            self.Quad.append(("=", temp_var_suma, '',id))
+            # Guardar los quads de asig
+            asigQuads.append(("+", id, 1, temp_var_suma))
+            asigQuads.append(("=", temp_var_suma, '',id))
+
             temp_var_bool = self.get_next_temp()
 
             # generar quad de expresion
@@ -454,7 +456,12 @@ class MyParser:
         
         # trad loop: (dec, exp, asg)
         if len(p) == 6 and isinstance(p[1], dict):
-            print()
+            first_asg_quad = p[3]
+            n_elem_of_asig = len(self.Quad) - first_asg_quad 
+            # get the asig quads
+            asigQuads = self.Quad[-n_elem_of_asig:]
+            # remover quads from global stack to be pushed after for block ends
+            del self.Quad[-n_elem_of_asig:]
         
         # looping arrays
         if(len(p) == 4):
@@ -463,25 +470,52 @@ class MyParser:
             # TODO: por ahora solo mete el id en el bloque
             self.curr_symbol_table.add_symbol(p[1], {Var.ID : p[1], Var.TIPO : Tipo.INT})
         
-        p[0] = ''
+        p[0] = asigQuads
+    
+    def p_forExp(self, p):
+        '''
+        forExp : beforeExpJump expresion
+        '''
+        # exp esta en PilaO y debe de ser bool
+        if self.PilaO and self.PTypes:
+            if self.PTypes.pop() != Tipo.BOOL:
+                self.p_error(get_error_message(Error.FOR_EXPRESSION_MUST_BE_BOOL))
+            # crear GOTOF con exp
+            self.Quad.append(("GOTOF", self.PilaO.pop()))
+            self.PSaltosFor.append(len(self.Quad)-1)
+        else:
+             self.p_error(get_error_message(Error.INTERNAL_STACKS))
+        # nos servira mas tarde para mover los quads de asign al final
+        p[0] = len(self.Quad)
+    
+    def p_beforeExpJump(self,p):
+        '''
+        beforeExpJump : empty
+        '''
+        # antes de EVALUAR exp guardar migaja de pan
+        # dejar migaja de pan para volver DESPUES de asignar A evaluar
+        self.PSaltosFor.append(len(self.Quad))
+        p[0] = '' 
+
 
     def p_decSimple(self, p):
         '''
         decSimple : tipo ID EQUAL expresion
         '''
         if self.PTypes and self.PilaO:
-            tipo_exp = self.PTypes[-1] 
+            tipo_exp = self.PTypes.pop()
             # check type mismatch
             if p[1] != tipo_exp:
                  self.p_error(get_error_message(Error.TYPE_MISMATCH))
+            symbol = {p[2] : {Var.ID: p[2], Var.TIPO : p[1], Var.KIND : Kind.SINGLE, Var.VAL : self.PilaO.pop()}}
+            # adding dec simple to table
+            self.curr_symbol_table.add_symbol_object(symbol)
+            p[0] = symbol
         else:
             # weird mistake. should have type at the top of the expression
-            self.p_error(get_error_message(999))
-        symbol = {p[2] : {Var.ID: p[2], Var.TIPO : p[1], Var.KIND : Kind.SINGLE, Var.VAL : self.PilaO.top()}}
-        # adding dec simple to table
-        self.curr_symbol_table.add_symbol_object(symbol)
-
-        p[0] = symbol
+            self.p_error(get_error_message(Error.INTERNAL_STACKS))
+            p[0] = "error"
+       
 
     def p_cicloArray(self, p):
         '''
@@ -626,7 +660,7 @@ class MyParser:
                     self.p_error(get_error_message(Error.TYPE_MISMATCH, type_mism=op))
             else:
                 # mistake of stacks
-                self.p_error(get_error_message(999))
+                self.p_error(get_error_message(Error.INTERNAL_STACKS))
         else:
             p[0] = p[1] if(p[1] != 'empty') else {}
 

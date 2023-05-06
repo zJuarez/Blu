@@ -1,0 +1,5 @@
+PRINT "START"
+FOR(INT i = 0, i > 10, i = i + 1){
+    PRINT i
+}
+PRINT "END"

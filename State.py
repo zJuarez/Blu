@@ -54,6 +54,8 @@ class Error(Enum):
     TYPE_MISMATCH = 4
     EXPRESSION_WENT_WRONG = 5
     IF_EXPRESSION_MUST_BE_BOOL = 6
+    INTERNAL_STACKS = 7
+    FOR_EXPRESSION_MUST_BE_BOOL = 8
 
 def get_error_message(error, var = '', type_mism = {}):
     if error == Error.REDECLARED_VARIABLE:
@@ -68,6 +70,10 @@ def get_error_message(error, var = '', type_mism = {}):
         return "Error : Expression went wrong"
     elif error == Error.IF_EXPRESSION_MUST_BE_BOOL:
         return "Error : If Expression must be bool"
+    elif error == Error.INTERNAL_STACKS:
+        return "Internal Error involving STACKS"
+    elif error == Error.FOR_EXPRESSION_MUST_BE_BOOL:
+        return "Error : For Expression must be bool"
     else:
         return "Error not found"
     
