@@ -27,6 +27,8 @@ class MyParser:
         self.TempCount = 0
         self.Cube = SemanticCube()
         self.PSaltos = []
+        self.PGoto = []
+        self.PGotoF = []
     
     # using stacks and creating quads
     def handle_expresion_type(self):
@@ -215,20 +217,15 @@ class MyParser:
         '''
         condicion : IF LPAREN expresion RPAREN checkExp bloqueif condicionElse
         '''
-        # 3 rellenar quad del gotof con cont
-        if self.PSaltos :
-            contAnt = self.PSaltos.pop()
-            self.Quad[contAnt] = self.Quad[contAnt] + (len(self.Quad),)
-        else :
-             # weird mistake
-             self.p_error(get_error_message(999))
-        if p[7] == "acaboElseIf":
-             # 3 rellenar quad del goto con cont
-            if self.PSaltos :
-                contAnt = self.PSaltos.pop()
-                self.Quad[contAnt] = self.Quad[contAnt] + (len(self.Quad),)
+        # Al final de un acabaIf o acabaElseIf
+        if p[7] != "acaboElse":
+             # GOTOF pendiente
+            if self.PGotoF :
+                # 1 pop pgotof
+                # 2 rellenar gotof con cont
+                self.Quad[self.PGotoF.pop()] +=  (len(self.Quad),)
             else :
-                # weird mistake
+                # weird mistake. should have pending gotof if not ending on else
                 self.p_error(get_error_message(999))
         p[0] = ''
     
@@ -239,30 +236,51 @@ class MyParser:
          # verificar que la expresion que acabamos de pasar es booleana
         if self.PTypes and self.PTypes[-1] != Tipo.BOOL:
             self.p_error(get_error_message(Error.IF_EXPRESSION_MUST_BE_BOOL))
+
+        # if R paren
         if self.PilaO : 
             # quad with exp
-            # FALTA RELLENAR
+            # 1 crear gotof
             self.Quad.append(("GOTOF", self.PilaO.pop()))
-            # psaltos push cont-1
-            self.PSaltos.append(len(self.Quad) -1)
+            # 2 guardar cont -1 en PGotoF
+            self.PGotoF.append(len(self.Quad) -1)
         else :
-            # some weird mistake
+            # some weird mistake. should have an bool exp on PilaO
             self.p_error(get_error_message(999))
 
         p[0] = ''
 
     def p_condicionElse(self, p):
         '''
-        condicionElse : ELSE condicionElseP 
+        condicionElse : myElse condicionElseP 
         | empty
         '''
         # acaboIf, acaboElse, acaboElseIf
 
         p[0] = "acaboIf" if len(p) < 3 else p[2]
 
+    def p_myElse(self,p):
+        '''
+        myElse : ELSE 
+        '''
+        # ELSE 
+        # 1 hacer goto
+        self.Quad.append(("GOTO",))
+        # 2 push Pgoto cont -1
+        self.PGoto.append(len(self.Quad) - 1)
+        # 3 pop Pgotof
+        # 4 rellenar gotof con cont
+        if self.PGotoF:
+            self.Quad[self.PGotoF.pop()] +=  (len(self.Quad),)
+        else:
+            # some weird mistake. should have a gotof waiting to be filled
+            self.p_error(get_error_message(999))
+
+        p[0] = p[1]
+
     def p_condicionElseP(self, p):
         '''
-        condicionElseP : ifFromElseIf LPAREN expresion RPAREN checkExp bloqueif condicionElse
+        condicionElseP : IF LPAREN expresion RPAREN checkExp bloqueElse condicionElse
         | bloqueElse
         '''
         # acaboIf, acaboElse, acaboElseIf
@@ -270,27 +288,6 @@ class MyParser:
             p[0] = "acaboElse"
         else:
             p[0] = "acaboElseIf" if p[7] == "acaboIf" else p[7]
-
-    def p_ifFromElseIf(self,p):
-        '''
-        ifFromElseIf : IF
-        '''
-        # 1 generar goto de bloque anterior
-        self.Quad.append(("GOTO",))
-        # 2 rellenar gotoF a cont
-        if self.PSaltos :
-            self.Quad[self.PSaltos.pop()]+= (len(self.Quad),)
-        else :
-             # weird mistake
-             self.p_error(get_error_message(999))
-             
-        # 2.1 hay otro en PSaltos? es el segundo else if
-        # rellenar goto a goto que acabamos de meter (conejito)
-        if self.PSaltos :
-            self.Quad[self.PSaltos.pop()]+= (len(self.Quad) - 1,)
-        # 3 guardar posicion del goto del bloque anterior
-        self.PSaltos.append(len(self.Quad) - 1)
-        p[0] = ''
 
     def p_bloqueif(self, p):
         '''
@@ -300,30 +297,23 @@ class MyParser:
     
     def p_bloqueElse(self, p):
         '''
-        bloqueElse : lbracketelse bloqueP rbracketif
+        bloqueElse : lbracketif bloqueP rbracketelse
         '''
         p[0] = ''
     
-    def p_lbracketelse(self, p):
+    def p_rbracketelse(self, p):
         '''
-        lbracketelse : lbracketif
+        rbracketelse : rbracketif
         '''
-        # 2. crear GOTO
-        self.Quad.append(("GOTO",))
-        # rellenar if del gotof anterior
-        if self.PSaltos:
-            self.Quad[self.PSaltos.pop()]+= (len(self.Quad),)
+        # rbracket de un else o else if
+        # 1 pop pgoto y rellenar con cont
+        if self.PGoto:
+            self.Quad[self.PGoto.pop()] +=  (len(self.Quad),)
         else:
+            # some weird mistake. should have a goto waiting to be filled
             self.p_error(get_error_message(999))
-
-        # 2.1 si tiene uno mas es del goto (conejito)
-        if self.PSaltos:
-            self.Quad[self.PSaltos.pop()]+= (len(self.Quad) - 1,)
-
-        # push 
-        self.PSaltos.append(len(self.Quad) - 1)
-        p[0] = ''
         
+        p[0] = p[1]
 
     def p_bloqueifP(self, p):
         '''

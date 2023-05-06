@@ -1,0 +1,11 @@
+INT money = 4, papa = 0
+IF(money > 8){
+    INT money = 4
+    money = 4 + money
+}ELSE IF (money >= 2 && money <= 4){
+    money = money * money
+}ELSE IF(money > 0){
+    money = 1-1
+}ELSE{
+    money = papa
+}
