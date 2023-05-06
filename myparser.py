@@ -26,6 +26,7 @@ class MyParser:
         self.PTypes = []
         self.TempCount = 0
         self.Cube = SemanticCube()
+        self.PSaltos = []
     
     # using stacks and creating quads
     def handle_expresion_type(self):
@@ -214,6 +215,21 @@ class MyParser:
         '''
         condicion : IF LPAREN expresion RPAREN checkExp bloqueif condicionElse
         '''
+        # 3 rellenar quad del gotof con cont
+        if self.PSaltos :
+            contAnt = self.PSaltos.pop()
+            self.Quad[contAnt] = self.Quad[contAnt] + (len(self.Quad),)
+        else :
+             # weird mistake
+             self.p_error(get_error_message(999))
+        if p[7] == "acaboElseIf":
+             # 3 rellenar quad del goto con cont
+            if self.PSaltos :
+                contAnt = self.PSaltos.pop()
+                self.Quad[contAnt] = self.Quad[contAnt] + (len(self.Quad),)
+            else :
+                # weird mistake
+                self.p_error(get_error_message(999))
         p[0] = ''
     
     def p_checkExp(self,p):
@@ -223,6 +239,16 @@ class MyParser:
          # verificar que la expresion que acabamos de pasar es booleana
         if self.PTypes and self.PTypes[-1] != Tipo.BOOL:
             self.p_error(get_error_message(Error.IF_EXPRESSION_MUST_BE_BOOL))
+        if self.PilaO : 
+            # quad with exp
+            # FALTA RELLENAR
+            self.Quad.append(("GOTOF", self.PilaO.pop()))
+            # psaltos push cont-1
+            self.PSaltos.append(len(self.Quad) -1)
+        else :
+            # some weird mistake
+            self.p_error(get_error_message(999))
+
         p[0] = ''
 
     def p_condicionElse(self, p):
@@ -230,14 +256,99 @@ class MyParser:
         condicionElse : ELSE condicionElseP 
         | empty
         '''
-        p[0] = ''
+        # acaboIf, acaboElse, acaboElseIf
+
+        p[0] = "acaboIf" if len(p) < 3 else p[2]
 
     def p_condicionElseP(self, p):
         '''
-        condicionElseP : IF LPAREN expresion RPAREN checkExp bloqueif condicionElse
+        condicionElseP : ifFromElseIf LPAREN expresion RPAREN checkExp bloqueif condicionElse
         | bloqueElse
         '''
+        # acaboIf, acaboElse, acaboElseIf
+        if (len(p) < 3):
+            p[0] = "acaboElse"
+        else:
+            p[0] = "acaboElseIf" if p[7] == "acaboIf" else p[7]
+
+    def p_ifFromElseIf(self,p):
+        '''
+        ifFromElseIf : IF
+        '''
+        # 1 generar goto de bloque anterior
+        self.Quad.append(("GOTO",))
+        # 2 rellenar gotoF a cont
+        if self.PSaltos :
+            self.Quad[self.PSaltos.pop()]+= (len(self.Quad),)
+        else :
+             # weird mistake
+             self.p_error(get_error_message(999))
+             
+        # 2.1 hay otro en PSaltos? es el segundo else if
+        # rellenar goto a goto que acabamos de meter (conejito)
+        if self.PSaltos :
+            self.Quad[self.PSaltos.pop()]+= (len(self.Quad) - 1,)
+        # 3 guardar posicion del goto del bloque anterior
+        self.PSaltos.append(len(self.Quad) - 1)
         p[0] = ''
+
+    def p_bloqueif(self, p):
+        '''
+        bloqueif : lbracketif bloqueP rbracketif
+        '''
+        p[0] = ''
+    
+    def p_bloqueElse(self, p):
+        '''
+        bloqueElse : lbracketelse bloqueP rbracketif
+        '''
+        p[0] = ''
+    
+    def p_lbracketelse(self, p):
+        '''
+        lbracketelse : lbracketif
+        '''
+        # 2. crear GOTO
+        self.Quad.append(("GOTO",))
+        # rellenar if del gotof anterior
+        if self.PSaltos:
+            self.Quad[self.PSaltos.pop()]+= (len(self.Quad),)
+        else:
+            self.p_error(get_error_message(999))
+
+        # 2.1 si tiene uno mas es del goto (conejito)
+        if self.PSaltos:
+            self.Quad[self.PSaltos.pop()]+= (len(self.Quad) - 1,)
+
+        # push 
+        self.PSaltos.append(len(self.Quad) - 1)
+        p[0] = ''
+        
+
+    def p_bloqueifP(self, p):
+        '''
+        bloqueifP : estatuto bloqueifP 
+        | empty
+        '''
+        p[0] = ''
+
+    def p_lbracketif(self, p):
+        '''
+        lbracketif : LBRACKET
+        '''
+        # create new block
+        self.curr_symbol_table = SymbolTable(parent=self.curr_symbol_table)
+        p[0] = ''
+
+    def p_rbracketif(self, p):
+        '''
+        rbracketif : RBRACKET
+        '''
+        # destroy block
+        self.curr_symbol_table = self.curr_symbol_table.get_parent() 
+        
+        p[0] = ''
+
 
     def p_ciclo(self, p):
         '''
@@ -610,42 +721,6 @@ class MyParser:
         self.curr_state.add_info(Var.TIPO, tipo)
         p[0] = tipo
 
-    def p_bloqueif(self, p):
-        '''
-        bloqueif : lbracketif bloqueP rbracketif
-        '''
-        p[0] = ''
-    
-    def p_bloqueElse(self, p):
-        '''
-        bloqueElse : lbracketif bloqueP rbracketif
-        '''
-        p[0] = ''
-
-    def p_bloqueifP(self, p):
-        '''
-        bloqueifP : estatuto bloqueifP 
-        | empty
-        '''
-        p[0] = ''
-
-    def p_lbracketif(self, p):
-        '''
-        lbracketif : LBRACKET
-        '''
-        # create new block
-        self.curr_symbol_table = SymbolTable(parent=self.curr_symbol_table)
-        p[0] = ''
-
-    def p_rbracketif(self, p):
-        '''
-        rbracketif : RBRACKET
-        '''
-        # destroy block
-        self.curr_symbol_table = self.curr_symbol_table.get_parent() 
-        
-        p[0] = ''
-
     def p_expresion(self, p):
         '''
         expresion : expresionA expresionP
@@ -898,6 +973,7 @@ class MyParser:
             result = self.parser.parse(text, lexer=self.lexer.lexer)
             for i,quad in enumerate(self.Quad):
                 print(str(i) + ". " + str(quad)) 
+            print(self.PSaltos)
             return result
         except Exception as e:
             print(e)

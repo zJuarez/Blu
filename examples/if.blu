@@ -1,16 +1,14 @@
-INT money = 8
+INT money = 8, papa = 0
 BOOL c
 IF(money > 8){
     INT money = 4
     money = 4 + money
-}
-ELSE IF (money >= 2 && money <= 4){
-
-}ELSE IF(money > 0){
-
 }ELSE{
-    IF(c || c && c){
-        
+    money = papa
+    IF(c){
+        c = FALSE
+    }ELSE {
+        c = FALSE
     }
-
 }
+papa = 1
