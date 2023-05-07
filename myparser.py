@@ -363,7 +363,6 @@ class MyParser:
         ciclo : myFor LPAREN cicloCont RPAREN bloqueCiclo
         | WHILE LPAREN whileExp RPAREN bloqueCiclo
         '''
-        print("ciclo")
         # una vez se acabo, meter los quads de asign
         asigQuads = p[3]
         self.Quad = self.Quad + asigQuads
@@ -379,16 +378,14 @@ class MyParser:
 
         # al final del ciclo tienes que rellenar gotof al proximo quad a generar
         self.Quad[gotof]+=(len(self.Quad),)
-
-
-      
         p[0] = ''
     
     def p_whileExp(self,p):
         '''
         whileExp : forExp
         '''
-        print("evvv")
+        # start new block
+        self.curr_symbol_table = SymbolTable(parent=self.curr_symbol_table)
         p[0] = []
 
     def p_bloqueCiclo(self, p):
@@ -397,7 +394,6 @@ class MyParser:
         '''
         # finalizar el ciclo acaba las variables del bloque del ciclo
         self.curr_symbol_table = self.curr_symbol_table.get_parent()
-        
         p[0] = ''
     
 
