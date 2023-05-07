@@ -38,6 +38,8 @@ class MyLexer(object):
     'CIRCLE': 'CIRCLE',
     'CURVE_C': 'CURVE_C',
     'CURVE_Q' : 'CURVE_Q',
+    'RETURN' : 'RETURN',
+    'WHILE' : 'WHILE',
     }
 
     # All tokens must be named in advance.

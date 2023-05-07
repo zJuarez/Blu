@@ -1,0 +1,7 @@
+INT a = 0
+PRINT "above"
+BOOL flag = TRUE
+WHILE(a < 0 && flag){
+    PRINT "inside"
+}
+PRINT "outside"

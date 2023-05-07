@@ -361,8 +361,9 @@ class MyParser:
     def p_ciclo(self, p):
         '''
         ciclo : myFor LPAREN cicloCont RPAREN bloqueCiclo
+        | WHILE LPAREN whileExp RPAREN bloqueCiclo
         '''
-
+        print("ciclo")
         # una vez se acabo, meter los quads de asign
         asigQuads = p[3]
         self.Quad = self.Quad + asigQuads
@@ -382,6 +383,13 @@ class MyParser:
 
       
         p[0] = ''
+    
+    def p_whileExp(self,p):
+        '''
+        whileExp : forExp
+        '''
+        print("evvv")
+        p[0] = []
 
     def p_bloqueCiclo(self, p):
         '''
