@@ -668,8 +668,17 @@ class MyParser:
         '''
         declararArray : LSQBRACKET ICTE RSQBRACKET declararArrayP
         '''
-        # 4 La primera dimension del arreglo o matriz es de tamaño p[2]
+        if p[2][0] < 1:
+            self.p_error(get_error_message(Error.BAD_ARRAY_DECLARATION_INDEX))
+        # 4 La primera dimension del arreglo o matriz es de tamaño p[2][0]
         p[0] = {Var.DIM1: p[2][0]} | p[4]
+        symbol = p[0]
+        if symbol and Var.VAL in symbol:
+            val = symbol[Var.VAL]
+            if len(val) != symbol[Var.DIM1]:
+                self.p_error(get_error_message(Error.WRONG_ARRAY_SIZE_DECLARATION_DIM1))
+            if Var.DIM2 in symbol and len(val[0]) != symbol[Var.DIM2]:
+                self.p_error(get_error_message(Error.WRONG_ARRAY_SIZE_DECLARATION_DIM2))
 
     def p_declararArrayP(self, p):
         '''
@@ -685,7 +694,7 @@ class MyParser:
             # 7 establecer que se declara un MATRIX
             var|={Var.KIND : Kind.MATRIX}
             # puede tener valor
-            var|=p[4]
+            var|=p[4]                
         else:
             # 6 establecer que se declara un array
             var|={Var.KIND : Kind.ARRAY}
@@ -707,11 +716,16 @@ class MyParser:
         inicializaArray : EQUAL acte 
         | empty
         '''
-        # esta inicializando el array
-        if p[1] != 'empty':
-            # 8 guardar el valor del array o matriz TODO p[2]
+        # esta inicializando el array o mat
+        if len(p) > 2:
             # por mientras guardar otra cosa
-            p[0] = {Var.VAL: 'mi valor es un array o matriz'}
+            # should be 
+            if(isinstance(p[2], list)):
+                if(p[2] and isinstance(p[2][0], list)):
+                    val=[[t[0] for t in sublist] for sublist in p[2]] # matrix
+                elif p[2] and not isinstance(p[2][0], list):
+                    val = [t[0] for t in p[2]]  #array
+                p[0] = {Var.VAL: val}
         else:
             p[0] = {}
 
@@ -732,45 +746,61 @@ class MyParser:
         '''
         p[0] = (p[1] == "TRUE", Tipo.BOOL)
 
-    def p_ascte(self, p):
-        '''
-        ascte : LSQBRACKET ascteP RSQBRACKET
-        '''
-        p[0] = ''
-
-    def p_ascteP(self, p):
-        '''
-        ascteP : cte asctePP
-        '''
-        p[0] = ''
-
-    def p_asctePP(self, p):
-        '''
-        asctePP : COMMA ascteP 
-        | empty
-        '''
-        p[0] = ''
-
     def p_acte(self, p):
         '''
-        acte : LSQBRACKET acteP RSQBRACKET
+        acte : LSQBRACKET acteC
+        '''
+        p[0] = p[2]
+    
+    def p_acteC(self, p):
+        '''
+        acteC :  acteP RSQBRACKET
+        | ascteC RSQBRACKET
         '''
         p[0] = p[1]
 
     def p_acteP(self, p):
         '''
         acteP : cte actePP
-        | ascte actePP
         '''
-        p[0] = ''
+        # single element
+        if p[2] and p[1][1] != p[2][0][1]:
+            # type checking
+            self.p_error(get_error_message(Error.ALL_ARRAY_ELEMENTS_MUST_BE_SAME_TYPE))
+        p[0] = [p[1]] + p[2]
 
     def p_actePP(self, p):
         '''
         actePP : COMMA acteP 
         | empty
         '''
-        p[0] = ''
+        p[0] = [] if len(p) == 2 else p[2]
+    
+    def p_ascteC(self,p):
+        '''
+        ascteC : ascte ascteCC
+        '''
+        if p[2] and p[2][0] and len(p[1]) != len(p[2][0]):
+             self.p_error(get_error_message(Error.ALL_MATRIX_ARRAYS_MUST_BE_SAME_LENGTH))
+        if p[2] and p[2][0] and p[1] and p[1][0][1] != p[2][0][0][1]:
+             self.p_error(get_error_message(Error.ALL_MATRIX_ARRAYS_MUST_BE_SAME_TYPE))
+        if p[2] != [[]]:
+            p[0] = [p[1]] + p[2]
+        else:
+            p[0] = [p[1]]
+    
+    def p_ascteCC(self,p):
+        '''
+        ascteCC : COMMA ascteC
+        | empty
+        '''
+        p[0] = [[]] if len(p) == 2 else p[2]
 
+    def p_ascte(self, p):
+        '''
+        ascte : LSQBRACKET acteP RSQBRACKET
+        '''
+        p[0] = p[2]
 
     def p_estado(self, p):
         '''

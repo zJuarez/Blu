@@ -56,6 +56,12 @@ class Error(Enum):
     IF_EXPRESSION_MUST_BE_BOOL = 6
     INTERNAL_STACKS = 7
     FOR_EXPRESSION_MUST_BE_BOOL = 8
+    ALL_ARRAY_ELEMENTS_MUST_BE_SAME_TYPE = 9
+    ALL_MATRIX_ARRAYS_MUST_BE_SAME_LENGTH = 10
+    ALL_MATRIX_ARRAYS_MUST_BE_SAME_TYPE = 11
+    BAD_ARRAY_DECLARATION_INDEX = 12
+    WRONG_ARRAY_SIZE_DECLARATION_DIM1 = 13
+    WRONG_ARRAY_SIZE_DECLARATION_DIM2 = 14
 
 def get_error_message(error, var = '', type_mism = {}):
     if error == Error.REDECLARED_VARIABLE:
@@ -74,6 +80,18 @@ def get_error_message(error, var = '', type_mism = {}):
         return "Internal Error involving STACKS"
     elif error == Error.FOR_EXPRESSION_MUST_BE_BOOL:
         return "Error : For Expression must be bool"
+    elif error == Error.ALL_ARRAY_ELEMENTS_MUST_BE_SAME_TYPE:
+        return "Error : All array elemnts must be same type"
+    elif error == Error.ALL_MATRIX_ARRAYS_MUST_BE_SAME_LENGTH:
+        return "Error : All matrix's arrays must be same length"
+    elif error == Error.ALL_MATRIX_ARRAYS_MUST_BE_SAME_TYPE:
+        return "Error : All matrix's arrays must be same type"
+    elif error == Error.BAD_ARRAY_DECLARATION_INDEX:
+        return "Error : Bad array declaration index"
+    elif error == Error.WRONG_ARRAY_SIZE_DECLARATION_DIM1:
+        return "Error : Wrong array size declaration dimention 1"
+    elif error == Error.WRONG_ARRAY_SIZE_DECLARATION_DIM2:
+        return "Error : Wrong array size declaration dimention 2"
     else:
         return "Error not found"
     
