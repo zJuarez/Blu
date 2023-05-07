@@ -68,8 +68,25 @@ class MyParser:
                 self.Quad.append(quad)
                 self.PilaO.append(temp_var) 
                 self.PTypes.append(res_type)
-
-
+    
+    def get_acte_info(self, acte):
+        res = {}
+        if(isinstance(acte, list)):
+            if(acte and isinstance(acte[0], list)):
+                tipo = acte[0][0][1]
+                val=[[t[0] for t in sublist] for sublist in acte] # matrix
+                kind = Kind.MATRIX
+                dim1 = len(val)
+                dim2 = len(val[0])
+                res = {Var.VAL: val, Var.KIND : kind, Var.TIPO : tipo, Var.DIM1: dim1, Var.DIM2: dim2}
+            elif acte and not isinstance(acte[0], list):
+                tipo = acte[0][1]
+                val = [t[0] for t in acte]  #array
+                kind = Kind.ARRAY
+                dim1 = len(val)
+                res = {Var.VAL: val, Var.KIND : kind, Var.TIPO : tipo, Var.DIM1: dim1}
+        return res
+    
     def p_codigo(self, p):
         '''
         codigo : funcion codigoP
@@ -401,8 +418,9 @@ class MyParser:
         asigQuads = []
         # loop X times
         if len(p) == 2:
-            invisible_var = 'invisible_var' 
-            # create invisible_id is starting in 0
+            invisible_var = self.get_next_temp()
+            # create invisible_id is starting in 1
+            # TODO do we need to add this to the symbol table?
             symbol = {invisible_var : {Var.ID: invisible_var, Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : 1}}
             # adding invisible id as cont in block
             self.curr_symbol_table.add_symbol_object(symbol)
@@ -435,7 +453,7 @@ class MyParser:
             symbol = {id : {Var.ID: id, Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : p[3][0]}}
             # adding id as cont in block
             self.curr_symbol_table.add_symbol_object(symbol)
-            # dejar migaja de pan para volver despues a asignar y evaluar
+            # dejar migaja de pan para volver despues de asignar a evaluar
             self.PSaltosFor.append(len(self.Quad))
             
             temp_var_suma = self.get_next_temp()
@@ -467,8 +485,43 @@ class MyParser:
         if(len(p) == 4):
             # deducir que tipo de variable es id y que kind y agregarla
             # usar p[3] para deducr esto
-            # TODO: por ahora solo mete el id en el bloque
-            self.curr_symbol_table.add_symbol(p[1], {Var.ID : p[1], Var.TIPO : Tipo.INT})
+            id = p[1]
+            if p[3][Var.KIND] == Kind.ARRAY:
+                self.curr_symbol_table.add_symbol(id, {Var.ID : id, Var.TIPO : p[3][Var.TIPO], 
+                                                     Var.KIND : Kind.SINGLE})
+            else:
+                 self.curr_symbol_table.add_symbol(id, {Var.ID : id, Var.TIPO : p[3][Var.TIPO], 
+                                                     Var.KIND : Kind.ARRAY, Var.DIM1 : p[3][Var.DIM2]})
+            invisible_var = self.get_next_temp()
+            # create invisible_id is starting in 0
+            # TODO do we need to add this to the symbol table?
+            symbol = {invisible_var : {Var.ID: invisible_var, Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : 0}}
+            # adding invisible id as cont in block
+            self.curr_symbol_table.add_symbol_object(symbol)
+            
+            iterable_id = p[3][Var.ID] if Var.ID in p[3] else self.get_next_temp()
+            # it's created on the spot. lets give it an invisible name
+            if Var.ID not in p[3]:
+                symbol = {iterable_id : {Var.ID: iterable_id} | p[3]}
+                self.curr_symbol_table.add_symbol_object(symbol)
+
+            # dejar migaja de pan para volver despues de asignar a evaluar
+            self.PSaltosFor.append(len(self.Quad))
+            exp_bool = self.get_next_temp()
+            # exp quad
+            self.Quad.append(("<", invisible_var, p[3][Var.DIM1], exp_bool))
+            # generar gotof, luego rellenamos
+            self.Quad.append(("GOTOF", exp_bool))
+            # pushear gotof que despues se rellenara con el final del for
+            self.PSaltosFor.append(len(self.Quad) - 1)
+            # asign id to the ith element
+            self.Quad.append(("=",(iterable_id, invisible_var), '',id))
+
+            temp_var_suma = self.get_next_temp()
+             # Guardar los quads de asig
+            asigQuads.append(("+", invisible_var, 1, temp_var_suma))
+            asigQuads.append(("=", temp_var_suma, '',invisible_var))
+            
         
         p[0] = asigQuads
     
@@ -519,12 +572,21 @@ class MyParser:
 
     def p_cicloArray(self, p):
         '''
-        cicloArray : expresion
+        cicloArray : ID
         | acte
         '''
-        # devuelve que tipo de array es
-        p[0] = {}
-
+        #is id
+        if isinstance(p[1], str):
+            id = p[1]
+            info = self.curr_symbol_table.get_symbol(id)
+            if info == None:
+                self.p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, id))
+            if info[Var.KIND] != Kind.ARRAY and info[Var.KIND] != Kind.MATRIX:
+                self.p_error(get_error_message(Error.ID_IS_NOT_ITERABLE, id))
+            p[0] = info
+        else:
+            p[0] = self.get_acte_info(p[1])
+            
     def p_asignacion(self, p):
         '''
         asignacion : asignacionS asignacionP
@@ -718,20 +780,10 @@ class MyParser:
         '''
         # esta inicializando el array o mat
         if len(p) > 2:
-            # por mientras guardar otra cosa
-            # should be 
-            if(isinstance(p[2], list)):
-                if(p[2] and isinstance(p[2][0], list)):
-                    tipo_dec = self.curr_state.get_info(Var.TIPO)
-                    if tipo_dec != p[2][0][0][1]:
-                        self.p_error(get_error_message(Error.TYPE_MISMATCH_IN_ARRAY_DECLARATION))
-                    val=[[t[0] for t in sublist] for sublist in p[2]] # matrix
-                elif p[2] and not isinstance(p[2][0], list):
-                    tipo_dec = self.curr_state.get_info(Var.TIPO)
-                    if tipo_dec != p[2][0][1]:
-                        self.p_error(get_error_message(Error.TYPE_MISMATCH_IN_ARRAY_DECLARATION))
-                    val = [t[0] for t in p[2]]  #array
-                p[0] = {Var.VAL: val}
+            acte = self.get_acte_info(p[2])
+            p[0] = {Var.VAL : acte[Var.VAL]}
+            if(self.curr_state.get_info(Var.TIPO) != acte[Var.TIPO]):
+                self.p_error(get_error_message(Error.TYPE_MISMATCH_IN_ARRAY_DECLARATION))
         else:
             p[0] = {}
 

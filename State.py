@@ -63,6 +63,7 @@ class Error(Enum):
     WRONG_ARRAY_SIZE_DECLARATION_DIM1 = 13
     WRONG_ARRAY_SIZE_DECLARATION_DIM2 = 14
     TYPE_MISMATCH_IN_ARRAY_DECLARATION = 15
+    ID_IS_NOT_ITERABLE = 16
 
 def get_error_message(error, var = '', type_mism = {}):
     if error == Error.REDECLARED_VARIABLE:
@@ -95,6 +96,8 @@ def get_error_message(error, var = '', type_mism = {}):
         return "Error : Wrong array size declaration dimention 2"
     elif error == Error.TYPE_MISMATCH_IN_ARRAY_DECLARATION:
         return "Error : Type mismatch in array declaration"
+    elif error == Error.ID_IS_NOT_ITERABLE:
+        return"Error : " + f"Variable '{var}' is not iterable"
     else:
         return "Error not found"
     

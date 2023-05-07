@@ -82,12 +82,12 @@ class MyLexer(object):
     
     def t_CCTE(self,t):
         r'\'[a-z]\''
-        t.value = (t.value, Tipo.CHAR)
+        t.value = (t.value[1:-1], Tipo.CHAR)
         return t
     
     def t_SCTE(self,t):
-        r'\".*\"'
-        t.value = (t.value, Tipo.STRING)
+        r'\".*?\"'
+        t.value = (t.value[1:-1], Tipo.STRING)
         return t
 
     def t_ID(self,t):

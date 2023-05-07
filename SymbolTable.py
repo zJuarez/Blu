@@ -16,6 +16,7 @@ class SymbolTable:
     def is_declarated_in_block(self, name):
         return name in self.symbols
     
+    # get symbol information given its id
     def get_symbol(self, name):
         symbol_table = self
         while symbol_table:
