@@ -722,8 +722,14 @@ class MyParser:
             # should be 
             if(isinstance(p[2], list)):
                 if(p[2] and isinstance(p[2][0], list)):
+                    tipo_dec = self.curr_state.get_info(Var.TIPO)
+                    if tipo_dec != p[2][0][0][1]:
+                        self.p_error(get_error_message(Error.TYPE_MISMATCH_IN_ARRAY_DECLARATION))
                     val=[[t[0] for t in sublist] for sublist in p[2]] # matrix
                 elif p[2] and not isinstance(p[2][0], list):
+                    tipo_dec = self.curr_state.get_info(Var.TIPO)
+                    if tipo_dec != p[2][0][1]:
+                        self.p_error(get_error_message(Error.TYPE_MISMATCH_IN_ARRAY_DECLARATION))
                     val = [t[0] for t in p[2]]  #array
                 p[0] = {Var.VAL: val}
         else:

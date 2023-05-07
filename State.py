@@ -62,6 +62,7 @@ class Error(Enum):
     BAD_ARRAY_DECLARATION_INDEX = 12
     WRONG_ARRAY_SIZE_DECLARATION_DIM1 = 13
     WRONG_ARRAY_SIZE_DECLARATION_DIM2 = 14
+    TYPE_MISMATCH_IN_ARRAY_DECLARATION = 15
 
 def get_error_message(error, var = '', type_mism = {}):
     if error == Error.REDECLARED_VARIABLE:
@@ -92,6 +93,8 @@ def get_error_message(error, var = '', type_mism = {}):
         return "Error : Wrong array size declaration dimention 1"
     elif error == Error.WRONG_ARRAY_SIZE_DECLARATION_DIM2:
         return "Error : Wrong array size declaration dimention 2"
+    elif error == Error.TYPE_MISMATCH_IN_ARRAY_DECLARATION:
+        return "Error : Type mismatch in array declaration"
     else:
         return "Error not found"
     
