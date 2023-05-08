@@ -867,7 +867,7 @@ class MyParser:
     def p_estado(self, p):
         '''
         estado : POS expresion expresion
-        |  BG expresion
+        | BG expresion
         | COLOR expresion
         | PENDOWN
         | PENUP
@@ -879,6 +879,18 @@ class MyParser:
         | ORIENTATION expresion
         | print
         '''
+        if p[1] == 'POS':
+            if len(self.PilaO) > 1:
+                self.Quad.append(("POS", (self.PilaO.pop(), self.PTypes.pop()), (self.PilaO.pop(), self.PTypes.pop())))
+            else:
+                self.p_error(get_error_message(Error.INTERNAL_STACKS))
+        elif p[1] == 'PENDOWN' or p[1] == 'PENUP':
+            self.Quad.append((p[1],))
+        elif p[1] != 'PRINT':
+            if self.PilaO:
+                self.Quad.append((p[1], (self.PilaO.pop(), self.PTypes.pop())))
+            else:
+                self.p_error(get_error_message(Error.INTERNAL_STACKS))
         p[0] = ''
 
     def p_print(self, p):
@@ -887,7 +899,7 @@ class MyParser:
         '''
         while self.PilaO:
             self.Quad.append(("PRINT", self.PilaO.pop(), self.PTypes.pop()))
-        p[0] = ''
+        p[0] = 'PRINT'
 
     def p_printP(self, p):
         '''
