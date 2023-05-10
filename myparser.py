@@ -15,6 +15,7 @@ class MyParser:
     def clear_state(self):
         self.errores = 0
         self.curr_symbol_table = SymbolTable()
+        self.func_table = SymbolTable()
         # añadir valores inicales del width, color, pos, etc.
         initialVals = initialStateSymbols()
         for key,value in initialVals.items():
@@ -24,11 +25,16 @@ class MyParser:
         self.POper = []
         self.Quad = []
         self.PTypes = []
+        self.PArgsCont = []
+        self.PIdLlamar = []
         self.TempCount = 0
         self.Cube = SemanticCube()
         self.PSaltosFor = []
+        self.PSaltosFunc = []
         self.PGoto = []
         self.PGotoF = []
+        self.PTiposDec = []
+        self.FuncionID = ""
     
     def get_next_temp(self):
         temp_var = 'z_' + str(self.TempCount)
@@ -87,6 +93,13 @@ class MyParser:
                 res = {Var.VAL: val, Var.KIND : kind, Var.TIPO : tipo, Var.DIM1: dim1}
         return res
     
+    def p_blu(self,p):
+        '''
+        blu : codigo
+        '''
+        self.Quad.append(("END", ))
+        p[0]=p[1]
+
     def p_codigo(self, p):
         '''
         codigo : funcion codigoP
@@ -103,16 +116,23 @@ class MyParser:
 
     def p_funcion(self, p):
         '''
-        funcion : tipoFuncion idFun args bloquefun
+        funcion : FUNCTION tipoFuncion idFun args bloquefun
         '''
+        # 2 crear end func
+        self.Quad.append(("ENDFUNC", ))
+        # 2.1 rellenar goto de func
+        if self.PSaltosFunc:
+            self.Quad[self.PSaltosFunc.pop()]+= (len(self.Quad),)
+        else:
+            self.p_error(get_error_message(Error.INTERNAL_STACKS))
+        
         p[0] = ''
 
     def p_idFun(self, p):
         '''
         idFun : ID
         '''
-        # poner en el estado el id de la funcion
-        self.curr_state.add_info(Var.ID, p[1])
+        self.FuncionID = p[1]
 
     def p_tipoFuncion(self, p):
         '''
@@ -120,26 +140,34 @@ class MyParser:
         | VOID
         '''
         # 1 almacenar el tipo de la funcion
-        self.curr_state.add_info(Var.TIPO, p[1])
+        if isinstance(p[1],str):
+            self.PTiposDec.append(Tipo.VOID)
+        # 1 crear goto
+        self.Quad.append(("GOTO",))
+        # 1.1 push en psaltosfunc
+        self.PSaltosFunc.append(len(self.Quad)-1)
 
     def p_args(self, p):
         '''
         args : LPAREN argsS RPAREN
         '''
         # traer el id de la funcion que acabamos de guardar
-        id = self.curr_state.get_info(Var.ID)
+        id = self.FuncionID
         # traer el tipo de la funcion que acabamos de guardar
-        tipo = self.curr_state.get_info(Var.TIPO)
+        tipo = self.PTiposDec.pop()
         # crear los atributos de la funcion con sus args y su tipo funcion
         function_attrs = {Var.ID : id, Var.TIPO : tipo, Var.ARGS : p[2], Var.KIND : Kind.FUNCTION}
 
         # añadir a la tabla de simbolos actual para que pueda ser usada despues
         self.curr_symbol_table.add_symbol(id, function_attrs)
+        # añadir a la tabla de funciones NEW
+        self.func_table.add_symbol(id, function_attrs)
+
         # crear nueva tabla para el bloque de funcion con padre la tabla actual
         self.curr_symbol_table = SymbolTable(parent=self.curr_symbol_table)
         # los args deben de vivir dentro de este bloque -> añadir
-        for id, symbol_attrs in p[2].items():
-            self.curr_symbol_table.add_symbol(id, symbol_attrs)
+        for args_object in p[2]:
+            self.curr_symbol_table.add_symbol_object(args_object)
 
         # devolver args si acaso sirve
         p[0] = p[2]
@@ -149,31 +177,41 @@ class MyParser:
         argsS : argsP 
         | empty
         '''
-        p[0] = {} if p[1] == 'empty' else p[1]
+        p[0] = [] if p[1] == 'empty' else p[1]
 
     def p_argsP(self, p):
         '''
         argsP : arg argsPP
         '''
-        repeated_keys = set(p[1].keys()) & set(p[2].keys())
-        if(repeated_keys):
+        args = p[1] + p[2]
+        seen_keys = set()
+        duplicated_keys = set()
+
+        for dictionary in args:
+            for key in dictionary.keys():
+                if key in seen_keys:
+                    duplicated_keys.add(key)
+                else:
+                    seen_keys.add(key)
+        if len(duplicated_keys) > 0:
             self.p_error(Error.DUPLICATED_ARGS)
         
-        p[0] = p[1] | p[2]
+        p[0] = p[1] + p[2]
 
     def p_argsPP(self, p):
         '''
-        argsPP : COMMA arg 
+        argsPP : COMMA arg argsPP
         | empty
         '''
-        p[0] = {} if p[1] == 'empty' else p[2]
+        p[0] = [] if p[1] == 'empty' else p[2] + p[3]
 
     def p_arg(self, p):
         '''
         arg : tipo ID argP
         '''
+        self.PTiposDec.pop()
         var = {Var.ID : p[2], Var.TIPO : p[1]} | p[3]
-        p[0] = {p[2] : var}
+        p[0] = [{p[2] : var}]
 
     def p_argP(self, p):
         '''
@@ -193,6 +231,8 @@ class MyParser:
         '''
         bloquefun : LBRACKET bloquefunP RBRACKET
         '''
+        # destroy block
+        self.curr_symbol_table = self.curr_symbol_table.get_parent() 
         p[0] = ''
 
     def p_bloquefunP(self, p):
@@ -200,24 +240,6 @@ class MyParser:
         bloquefunP : estatuto bloquefunP 
         | empty
         '''
-        p[0] = ''
-
-    def p_lbracketfun(self, p):
-        '''
-        lbracketfun : LBRACKET
-        '''
-        # add function var to current block
-
-        # create new block
-        self.curr_symbol_table = SymbolTable(parent=self.curr_symbol_table)
-        p[0] = ''
-
-    def p_rbracketfun(self, p):
-        '''
-        rbracketfun : RBRACKET
-        '''
-        # destroy block
-        self.curr_symbol_table = self.curr_symbol_table.get_parent() 
         p[0] = ''
 
     def p_estatuto(self, p):
@@ -663,6 +685,7 @@ class MyParser:
         
         # 11 limpiar curr state ?
         self.curr_state.clear()
+        self.PTiposDec.pop()
         p[0] = ('DECLARAR' , [p[2]] + p[3])
 
     def p_declararP(self, p):
@@ -684,7 +707,7 @@ class MyParser:
             self.p_error(get_error_message(Error.REDECLARED_VARIABLE, id))
         else : 
             # 10 añadir la variable a la tabla de variables
-            var = {Var.ID : id, Var.TIPO : self.curr_state.get_info(Var.TIPO)} | p[2]
+            var = {Var.ID : id, Var.TIPO : self.PTiposDec[-1]} | p[2]
             self.curr_symbol_table.add_symbol(id, var)
             # print("añadiendo a la tabla " + str(id))
         p[0] = var
@@ -708,7 +731,7 @@ class MyParser:
             # el valor de la exp debe de vivir en PilaO
             if self.PilaO and self.PTypes:
                 p[0] = {Var.VAL : self.PilaO.pop()}
-                l_type = self.curr_state.get_info(Var.TIPO)
+                l_type = self.PTiposDec[-1]
                 l_val = self.curr_state.get_info(Var.ID)
                 r_type = self.PTypes.pop()
                 if l_type != r_type:
@@ -786,7 +809,7 @@ class MyParser:
         if len(p) > 2:
             acte = self.get_acte_info(p[2])
             p[0] = {Var.VAL : acte[Var.VAL]}
-            if(self.curr_state.get_info(Var.TIPO) != acte[Var.TIPO]):
+            if(self.PTiposDec[-1] != acte[Var.TIPO]):
                 self.p_error(get_error_message(Error.TYPE_MISMATCH_IN_ARRAY_DECLARATION))
         else:
             p[0] = {}
@@ -911,7 +934,7 @@ class MyParser:
     def p_llamar(self, p):
         '''
         llamar : drawFunc
-        | idllamar LPAREN llamarP RPAREN 
+        | idllamar llamarRest
         '''
         p[0] = ''
 
@@ -920,25 +943,83 @@ class MyParser:
         idllamar : ID
         '''
         # function exists -> its declared before in any other higher block
-        if (self.curr_symbol_table.get_symbol(p[1])):
-            self.curr_state.add_info(Var.ID, p[1])
+        if (self.func_table.get_symbol(p[1])):
+            # needed?
+            # self.curr_state.add_info(Var.ID, p[1])
+            # needed
+            self.PIdLlamar.append(p[1])
+            self.Quad.append(("ERA", p[1]))
+            self.PArgsCont.append(0)
         else:
             self.p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, p[1]))
         p[0] = p[1]
 
+    def p_llamarRest(self,p):
+        '''
+        llamarRest : LPAREN llamarP RPAREN 
+        '''
+        if not self.PArgsCont or not self.PIdLlamar:
+            self.p_error(get_error_message(Error.INTERNAL_STACKS))
+        
+        id = self.PIdLlamar.pop()
+        params_len = len(self.func_table.get_symbol(id)[Var.ARGS])
+
+        if self.PArgsCont.pop() != params_len:
+            self.p_error(get_error_message(Error.FUNCTION_PARAMS_DIFF,  id, {}, params_len))
+
+        self.Quad.append(("GOSUB", id))
+        p[0] = ''
+    
     def p_llamarP(self, p):
         '''
-        llamarP : expresion llamarPP
+        llamarP : expresion postExpLlamar llamarPP
         | empty 
         '''
+        if not self.PIdLlamar:
+            self.p_error(get_error_message(Error.INTERNAL_STACKS))
+        id = self.PIdLlamar[-1]
+        if(len(p)==2):
+            params_len = len(self.func_table.get_symbol(id)[Var.ARGS])
+            if( params_len > 0):
+                self.p_error(get_error_message(Error.FUNCTION_PARAMS_DIFF,  id, {}, params_len))
         p[0] = ''
 
     def p_llamarPP(self, p):
         '''
-        llamarPP : COMMA expresion llamarPP
+        llamarPP : COMMA expresion postExpLlamar llamarPP
         | empty 
         '''
         p[0] = ''
+
+    def p_postExpLlamar(self,p):
+        ''' 
+        postExpLlamar : empty
+        '''
+        if not self.PArgsCont or not self.PIdLlamar or not self.PTypes or not self.PilaO:
+            self.p_error(get_error_message(Error.INTERNAL_STACKS))
+        
+        id = self.PIdLlamar[-1]
+        params_len = len(self.func_table.get_symbol(id)[Var.ARGS])
+
+        if self.PArgsCont[-1] == params_len:
+            self.p_error(get_error_message(Error.FUNCTION_PARAMS_DIFF,  id, {}, params_len))
+
+        param_id = list(self.func_table.get_symbol(id)[Var.ARGS][self.PArgsCont[-1]].keys())[0]
+        tipo_param = self.func_table.get_symbol(id)[Var.ARGS][self.PArgsCont[-1]][param_id][Var.TIPO]
+        tipo_arg = self.PTypes.pop()
+        if tipo_arg != tipo_param:
+            fun_type_mism = {
+                "id": id,
+                "param" : self.PArgsCont[-1] + 1,
+                "param_type": tipo_param,
+                "arg_type" : tipo_arg
+            }
+            self.p_error(get_error_message(Error.FUNCTION_PARAM_TYPE_MISMATCH, fun_type_mism=fun_type_mism))
+
+        self.PArgsCont[-1] = self.PArgsCont[-1] + 1
+        self.Quad.append(("PARAM", self.PilaO.pop(), "param" + str(self.PArgsCont[-1])))
+        p[0] = p[1]
+
 
     def p_drawFunc(self, p):
         '''
@@ -958,6 +1039,7 @@ class MyParser:
         '''
         # 1 almacenar el tipo de la variable
         tipo = get_tipo(p[1])
+        self.PTiposDec.append(tipo)
         self.curr_state.add_info(Var.TIPO, tipo)
         p[0] = tipo
 
@@ -1112,14 +1194,20 @@ class MyParser:
     def p_var(self, p):
         '''
         var : ID varP
+        | idllamar llamarRest
         '''
         # 1 si el id no existe error
         symbol = self.curr_symbol_table.get_symbol(p[1])
         if (symbol is None):
             self.p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, p[1]))
         
-        # append el id de la expresion a la pila 
-        self.PilaO.append(p[1])
+        if symbol[Var.TIPO] == Tipo.VOID:
+            self.p_error(get_error_message(Error.VOID_IN_EXPRESION))
+        # TODO check functionality with expresions of functions and arrays
+        if symbol[Var.KIND] == Kind.FUNCTION:
+            self.PilaO.append(self.get_next_temp())
+        else: # append el id de la expresion a la pila 
+            self.PilaO.append(p[1])
         # append el tipo
         self.PTypes.append(symbol[Var.TIPO])
         # devolver algo interesante
@@ -1146,28 +1234,7 @@ class MyParser:
 
     def p_varP(self, p):
         '''
-        varP : varPFuncion
-        | varPArray
-        | empty
-        '''
-        p[0] = ''
-
-    def p_varPFuncion(self, p):
-        '''
-        varPFuncion : LPAREN varPFuncionCont RPAREN
-        '''
-        p[0] = ''
-
-    def p_varPFuncionCont(self, p):
-        '''
-        varPFuncionCont : expresion varPFuncionContP
-        | empty
-        '''
-        p[0] = ''
-
-    def p_varPFuncionContP(self, p):
-        '''
-        varPFuncionContP : COMMA expresion varPFuncionContP
+        varP : varPArray
         | empty
         '''
         p[0] = ''

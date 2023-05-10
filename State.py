@@ -45,6 +45,7 @@ class Tipo(Enum):
     STRING = "STRING"
     CHAR = "CHAR"
     BOOL = "BOOL"
+    VOID = "VOID"
     NOT_DECLARED = "NOT_DECLARED"
 
 class Error(Enum):
@@ -64,8 +65,11 @@ class Error(Enum):
     WRONG_ARRAY_SIZE_DECLARATION_DIM2 = 14
     TYPE_MISMATCH_IN_ARRAY_DECLARATION = 15
     ID_IS_NOT_ITERABLE = 16
+    FUNCTION_PARAMS_DIFF = 17
+    FUNCTION_PARAM_TYPE_MISMATCH = 18
+    VOID_IN_EXPRESION = 19
 
-def get_error_message(error, var = '', type_mism = {}):
+def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_type_mism = {}):
     if error == Error.REDECLARED_VARIABLE:
         return "Error : " + f"Variable '{var}' already declared"
     elif error == Error.VARIABLE_NOT_DECLARED:
@@ -97,7 +101,13 @@ def get_error_message(error, var = '', type_mism = {}):
     elif error == Error.TYPE_MISMATCH_IN_ARRAY_DECLARATION:
         return "Error : Type mismatch in array declaration"
     elif error == Error.ID_IS_NOT_ITERABLE:
-        return"Error : " + f"Variable '{var}' is not iterable"
+        return "Error : " + f"Variable '{var}' is not iterable"
+    elif error == Error.FUNCTION_PARAMS_DIFF:
+        return "Error : " + f"Function '{var}' was expecting {n_expected_args} params"
+    elif error == Error.FUNCTION_PARAM_TYPE_MISMATCH:
+        return "Error : " + f"Function '{fun_type_mism['id']}' was expecting on param '{fun_type_mism['param']}' type '{fun_type_mism['param_type']}' but got type '{fun_type_mism['arg_type']}'"
+    elif error == Error.VOID_IN_EXPRESION:
+        return "Error : Can't use void functions on expresions"
     else:
         return "Error not found"
     

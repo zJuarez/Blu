@@ -1,10 +1,17 @@
-VOID square(INT x){
+FUNCTION INT sum(INT x, INT y){
+  PRINT sum(x,y)
+}
+BOOL y = TRUE
+y = FALSE
+FUNCTION BOOL square(INT x, BOOL y, STRING z){
   PENDOWN
   FOR (4) {
     GO 100
     RIGHT 90.5
   }
-   x = 2 + 2
+  x = 2 + 2
+  sum(x,x+1)
   PENUP
 }
-square(2)
+
+BOOL x = square(2 + 2*4, TRUE, "hello")
