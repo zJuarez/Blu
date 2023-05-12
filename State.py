@@ -71,6 +71,76 @@ class Error(Enum):
     FUNCTION_MUST_HAVE_RETURN = 20
     FUNTION_RETURN_TYPE_MISMATCH = 21
 
+class QOp(Enum):
+    EQUAL = 0
+    PLUS = 1
+    MINUS = 2
+    TIMES = 3
+    DIVIDE = 4
+    LCOMP = 5
+    RCOMP = 6
+    LCOMP_EQUAL = 7
+    RCOMP_EQUAL = 8
+    EQUAL_EQUAL = 9
+    EXC_EQUAL = 10
+    AND = 11
+    OR = 12
+    GOTO = 13
+    GOTOF = 14
+    POS = 15
+    BG = 16
+    COLOR = 17
+    PENDOWN = 18
+    PENUP = 19
+    WIDTH = 20
+    CIRCLE = 21
+    GO = 22
+    RIGHT = 23
+    LEFT = 24
+    ORIENTATION = 25
+    PRINT = 26
+    ERA = 27
+    GOSUB = 28
+    PARAM = 29
+    ENDFUNC = 30
+    RETURN = 31
+    END = 32
+
+operator_to_quadop = {
+    "=" : QOp.EQUAL,
+    "+" : QOp.PLUS,
+    "-" : QOp.MINUS,
+    "*" : QOp.TIMES,
+    "/" : QOp.DIVIDE,
+    "<" : QOp.LCOMP,
+    ">" : QOp.RCOMP,
+    "<=" : QOp.LCOMP_EQUAL,
+    ">=" : QOp.RCOMP_EQUAL,
+    "==" : QOp.EQUAL_EQUAL,
+    "!=" : QOp.EXC_EQUAL,
+    "&&" : QOp.AND,
+    "||" : QOp.OR
+}
+
+state_toquadop = {
+    "BG" : QOp.BG,
+    "COLOR" : QOp.COLOR,
+    "PENDOWN" : QOp.PENDOWN,
+    "PENUP" : QOp.PENUP,
+    "WIDTH" : QOp.WIDTH,
+    "CIRCLE" : QOp.CIRCLE,
+    "GO" : QOp.GO,
+    "RIGHT" : QOp.RIGHT,
+    "LEFT" : QOp.LEFT,
+    "ORIENTATION" : QOp.ORIENTATION,
+}
+
+def get_quad_operation_from_operator(operator):
+    return operator_to_quadop[operator]
+
+def get_quad_operation_from_state(state):
+    return state_toquadop[state]
+
 def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_type_mism = {}, ret_type_mism = {} , msg = ""):
     if error == Error.REDECLARED_VARIABLE:
         return "Error : " + f"Variable '{var}' already declared"
@@ -79,7 +149,7 @@ def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_
     elif error == Error.DUPLICATED_ARGS:
         return "Error : Duplicated Args"
     elif error == Error.TYPE_MISMATCH:
-        return "Error :  Type Mismatch " + f"Using '{type_mism['operator']}' with var '{type_mism['left']['val']}' of type '{type_mism['left']['tipo']}' and '{type_mism['right']['val']}' of type '{type_mism['right']['tipo']}'"
+        return "Error :  Type Mismatch " + f"Using '{type_mism['operator']}' with exp of type '{type_mism['left']}' and exp of type '{type_mism['right']}'"
     elif error == Error.EXPRESSION_WENT_WRONG:
         return "Error : Expression went wrong"
     elif error == Error.IF_EXPRESSION_MUST_BE_BOOL:
@@ -109,11 +179,11 @@ def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_
     elif error == Error.FUNCTION_PARAM_TYPE_MISMATCH:
         return "Error : " + f"Function '{fun_type_mism['id']}' was expecting on param '{fun_type_mism['param']}' type '{fun_type_mism['param_type']}' but got type '{fun_type_mism['arg_type']}'"
     elif error == Error.VOID_IN_EXPRESION:
-        return "Error : Can't use void functions on expresions"
+        return f"Error : Can't use void function {var} on expresions"
     elif error == Error.FUNCTION_MUST_HAVE_RETURN:
         return f"Error : Function '{var}' must have return statement at the end"
     elif error == Error.FUNTION_RETURN_TYPE_MISMATCH:
-        return f"Error : Type mismatch on function '{ret_type_mism['var']}' of type {ret_type_mism['type']} is not the same as return expresion of type {ret_type_mism['ret_type']}"
+        return f"Error : Type mismatch on function '{ret_type_mism['var']}' of type {ret_type_mism['type']} is not the same as return : QOp.BG, of type {ret_type_mism['ret_type']}"
     else:
         return "Error not found"
     

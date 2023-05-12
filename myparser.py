@@ -55,22 +55,16 @@ class MyParser:
             # get the result type according to semnatic cube
             res_type = self.Cube.get_type(left_Type, operator, right_Type)
             op = {
-                            'operator' : operator,
-                            'left' : {
-                                'val' : str(left_operand),
-                                'tipo' : str(left_Type.value)
-                            },
-                            'right' : {
-                                'val' : str(right_operand),
-                                'tipo' : str(right_Type.value)
-                            }
-                        }
+                'operator' : operator,
+                'left' :  str(left_Type.value),
+                'right' :  str(right_Type.value)
+            }
             if res_type is None :
                 self.p_error(get_error_message(Error.TYPE_MISMATCH, type_mism=op))
             else:
                 temp_var = self.get_next_temp()
                 # create and push the quad
-                quad = (operator, left_operand, right_operand, temp_var)
+                quad = (get_quad_operation_from_operator(operator), left_operand, right_operand, temp_var)
                 self.Quad.append(quad)
                 self.PilaO.append(temp_var) 
                 self.PTypes.append(res_type)
@@ -97,7 +91,7 @@ class MyParser:
         '''
         blu : codigo
         '''
-        self.Quad.append(("END", ))
+        self.Quad.append((QOp.END, ))
         p[0]=p[1]
 
     def p_codigo(self, p):
@@ -105,7 +99,7 @@ class MyParser:
         codigo : funcion codigoP
         | estatuto codigoP
         '''
-        p[0] = ('CORRECTO' if self.errores == 0  else "INCORRECTO" , [p[1]] + [p[2]])
+        p[0] = '' if True else ('CORRECTO' if self.errores == 0  else "INCORRECTO" , [p[1]] + [p[2]])
 
     def p_codigoP(self, p):
         '''
@@ -119,7 +113,7 @@ class MyParser:
         funcion : FUNCTION tipoFuncion idFun args bloquefun
         '''
         # 2 crear end func
-        self.Quad.append(("ENDFUNC", ))
+        self.Quad.append((QOp.ENDFUNC, ))
         # 2.1 rellenar goto de func
         if self.PSaltosFunc:
             self.Quad[self.PSaltosFunc.pop()]+= (len(self.Quad),)
@@ -143,7 +137,7 @@ class MyParser:
         if isinstance(p[1],str):
             self.PTiposDec.append(Tipo.VOID)
         # 1 crear goto
-        self.Quad.append(("GOTO",))
+        self.Quad.append((QOp.GOTO,))
         # 1.1 push en psaltosfunc
         self.PSaltosFunc.append(len(self.Quad)-1)
 
@@ -255,7 +249,7 @@ class MyParser:
             type_of_fun = self.PTiposDec.pop()
             if type_of_fun != type_of_return:
                 self.p_error(get_error_message(Error.FUNTION_RETURN_TYPE_MISMATCH, ret_type_mism={"var" : self.FuncionID, "type" : type_of_fun.value, "ret_type" : type_of_return.value}))
-            self.Quad.append(("RETURN", var_to_return))
+            self.Quad.append((QOp.RETURN, var_to_return))
 
 
     def p_bloquefunP(self, p):
@@ -304,7 +298,7 @@ class MyParser:
         if self.PilaO : 
             # quad with exp
             # 1 crear gotof
-            self.Quad.append(("GOTOF", self.PilaO.pop()))
+            self.Quad.append((QOp.GOTOF, self.PilaO.pop()))
             # 2 guardar cont -1 en PGotoF
             self.PGotoF.append(len(self.Quad) -1)
         else :
@@ -328,7 +322,7 @@ class MyParser:
         '''
         # ELSE 
         # 1 hacer goto
-        self.Quad.append(("GOTO",))
+        self.Quad.append((QOp.GOTO,))
         # 2 push Pgoto cont -1
         self.PGoto.append(len(self.Quad) - 1)
         # 3 pop Pgotof
@@ -419,7 +413,7 @@ class MyParser:
         migaja = self.PSaltosFor.pop()
 
         # crear goto a la migaja de pan para evaluar exp tra vez
-        self.Quad.append(("GOTO", migaja))
+        self.Quad.append((QOp.GOTO, migaja))
 
         # al final del ciclo tienes que rellenar gotof al proximo quad a generar
         self.Quad[gotof]+=(len(self.Quad),)
@@ -480,17 +474,17 @@ class MyParser:
             temp_var_suma = self.get_next_temp()
 
             # Guardar los quads de asig
-            asigQuads.append(("+", invisible_var, 1, temp_var_suma))
-            asigQuads.append(("=", temp_var_suma, '',invisible_var))
+            asigQuads.append((QOp.PLUS, invisible_var, 1, temp_var_suma))
+            asigQuads.append((QOp.EQUAL, temp_var_suma, '',invisible_var))
 
             temp_var_bool = self.get_next_temp()
 
             # generar quad de expresion
             sup_limit = p[1][0]
-            self.Quad.append(("<=", invisible_var, sup_limit, temp_var_bool))
+            self.Quad.append((QOp.LCOMP_EQUAL, invisible_var, sup_limit, temp_var_bool))
 
             # generar gotof, luego rellenamos
-            self.Quad.append(("GOTOF", temp_var_bool))
+            self.Quad.append((QOp.GOTOF, temp_var_bool))
             # pushear gotof que despues se rellenara con el final del for
             self.PSaltosFor.append(len(self.Quad) - 1)
 
@@ -508,16 +502,16 @@ class MyParser:
             temp_var_suma = self.get_next_temp()
 
             # Guardar los quads de asig
-            asigQuads.append(("+", id, 1, temp_var_suma))
-            asigQuads.append(("=", temp_var_suma, '',id))
+            asigQuads.append((QOp.PLUS, id, 1, temp_var_suma))
+            asigQuads.append((QOp.EQUAL, temp_var_suma, '',id))
 
             temp_var_bool = self.get_next_temp()
 
             # generar quad de expresion
             sup_limit = p[5][0]
-            self.Quad.append(("<=", id, sup_limit, temp_var_bool))
+            self.Quad.append((QOp.LCOMP_EQUAL, id, sup_limit, temp_var_bool))
             # generar gotof, luego rellenamos
-            self.Quad.append(("GOTOF", temp_var_bool))
+            self.Quad.append((QOp.GOTO, temp_var_bool))
             # pushear gotof que despues se rellenara con el final del for
             self.PSaltosFor.append(len(self.Quad) - 1)
         
@@ -558,18 +552,18 @@ class MyParser:
             self.PSaltosFor.append(len(self.Quad))
             exp_bool = self.get_next_temp()
             # exp quad
-            self.Quad.append(("<", invisible_var, p[3][Var.DIM1], exp_bool))
+            self.Quad.append((QOp.LCOMP, invisible_var, p[3][Var.DIM1], exp_bool))
             # generar gotof, luego rellenamos
-            self.Quad.append(("GOTOF", exp_bool))
+            self.Quad.append((QOp.GOTO, exp_bool))
             # pushear gotof que despues se rellenara con el final del for
             self.PSaltosFor.append(len(self.Quad) - 1)
             # asign id to the ith element
-            self.Quad.append(("=",(iterable_id, invisible_var), '',id))
+            self.Quad.append((QOp.EQUAL,(iterable_id, invisible_var), '',id))
 
             temp_var_suma = self.get_next_temp()
              # Guardar los quads de asig
-            asigQuads.append(("+", invisible_var, 1, temp_var_suma))
-            asigQuads.append(("=", temp_var_suma, '',invisible_var))
+            asigQuads.append((QOp.PLUS, invisible_var, 1, temp_var_suma))
+            asigQuads.append((QOp.EQUAL, temp_var_suma, '',invisible_var))
             
         
         p[0] = asigQuads
@@ -583,7 +577,7 @@ class MyParser:
             if self.PTypes.pop() != Tipo.BOOL:
                 self.p_error(get_error_message(Error.FOR_EXPRESSION_MUST_BE_BOOL))
             # crear GOTOF con exp
-            self.Quad.append(("GOTOF", self.PilaO.pop()))
+            self.Quad.append((QOp.GOTOF, self.PilaO.pop()))
             self.PSaltosFor.append(len(self.Quad)-1)
         else:
              self.p_error(get_error_message(Error.INTERNAL_STACKS))
@@ -663,13 +657,13 @@ class MyParser:
                 exp_type = self.PTypes.pop()
                 if(var_type == exp_type):
                     # same type! create quad
-                    self.Quad.append(("=", self.PilaO.pop(), '',var_id))
+                    self.Quad.append((QOp.EQUAL, self.PilaO.pop(), '',var_id))
                 elif(var_type == Tipo.INT and exp_type == Tipo.FLOAT):
                     # TODO Ask about casts
-                    self.Quad.append(("=", self.PilaO.pop(), '',var_id))
+                    self.Quad.append((QOp.EQUAL, self.PilaO.pop(), '',var_id))
                 elif(var_type == Tipo.FLOAT and exp_type == Tipo.INT):
                     # Ask about casts
-                    self.Quad.append(("=", self.PilaO.pop(), '',var_id))
+                    self.Quad.append((QOp.EQUAL, self.PilaO.pop(), '',var_id))
                 else:
                     self.p_error(get_error_message(Error.TYPE_MISMATCH))
             else:
@@ -709,6 +703,7 @@ class MyParser:
         self.curr_state.clear()
         self.PTiposDec.pop()
         p[0] = ('DECLARAR' , [p[2]] + p[3])
+        # self.curr_symbol_table.print()
 
     def p_declararP(self, p):
         '''
@@ -752,7 +747,7 @@ class MyParser:
             # 9 guardar el valor de la variable declarada
             # el valor de la exp debe de vivir en PilaO
             if self.PilaO and self.PTypes:
-                p[0] = {Var.VAL : self.PilaO.pop()}
+                p[0] = {Var.VAL : self.PilaO.pop(), Var.KIND : Kind.SINGLE}
                 l_type = self.PTiposDec[-1]
                 l_val = self.curr_state.get_info(Var.ID)
                 r_type = self.PTypes.pop()
@@ -773,7 +768,7 @@ class MyParser:
                 # mistake of stacks
                 self.p_error(get_error_message(Error.INTERNAL_STACKS))
         else:
-            p[0] = p[1] if(p[1] != 'empty') else {}
+            p[0] = p[1] if(p[1] != 'empty') else {Var.KIND : Kind.SINGLE}
 
     def p_declararArray(self, p):
         '''
@@ -926,14 +921,14 @@ class MyParser:
         '''
         if p[1] == 'POS':
             if len(self.PilaO) > 1:
-                self.Quad.append(("POS", (self.PilaO.pop(), self.PTypes.pop()), (self.PilaO.pop(), self.PTypes.pop())))
+                self.Quad.append((QOp.POS, (self.PilaO.pop(), self.PTypes.pop()), (self.PilaO.pop(), self.PTypes.pop())))
             else:
                 self.p_error(get_error_message(Error.INTERNAL_STACKS))
         elif p[1] == 'PENDOWN' or p[1] == 'PENUP':
-            self.Quad.append((p[1],))
+            self.Quad.append((get_quad_operation_from_state(p[1]),))
         elif p[1] != 'PRINT':
             if self.PilaO:
-                self.Quad.append((p[1], (self.PilaO.pop(), self.PTypes.pop())))
+                self.Quad.append((get_quad_operation_from_state(p[1]), (self.PilaO.pop(), self.PTypes.pop())))
             else:
                 self.p_error(get_error_message(Error.INTERNAL_STACKS))
         p[0] = ''
@@ -943,7 +938,7 @@ class MyParser:
         print : PRINT expresion printP 
         '''
         while self.PilaO:
-            self.Quad.append(("PRINT", self.PilaO.pop(), self.PTypes.pop()))
+            self.Quad.append((QOp.PRINT, self.PilaO.pop(), self.PTypes.pop()))
         p[0] = 'PRINT'
 
     def p_printP(self, p):
@@ -970,7 +965,7 @@ class MyParser:
             # self.curr_state.add_info(Var.ID, p[1])
             # needed
             self.PIdLlamar.append(p[1])
-            self.Quad.append(("ERA", p[1]))
+            self.Quad.append((QOp.ERA, p[1]))
             self.PArgsCont.append(0)
         else:
             self.p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, p[1]))
@@ -989,7 +984,7 @@ class MyParser:
         if self.PArgsCont.pop() != params_len:
             self.p_error(get_error_message(Error.FUNCTION_PARAMS_DIFF,  id, {}, params_len))
 
-        self.Quad.append(("GOSUB", id))
+        self.Quad.append((QOp.GOSUB, id))
         p[0] = ''
     
     def p_llamarP(self, p):
@@ -1039,7 +1034,7 @@ class MyParser:
             self.p_error(get_error_message(Error.FUNCTION_PARAM_TYPE_MISMATCH, fun_type_mism=fun_type_mism))
 
         self.PArgsCont[-1] = self.PArgsCont[-1] + 1
-        self.Quad.append(("PARAM", self.PilaO.pop(), "param" + str(self.PArgsCont[-1])))
+        self.Quad.append((QOp.PARAM, self.PilaO.pop(), "param" + str(self.PArgsCont[-1])))
         p[0] = p[1]
 
 
@@ -1223,7 +1218,7 @@ class MyParser:
         if (symbol is None):
             self.p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, p[1]))
         if symbol[Var.TIPO] == Tipo.VOID:
-            self.p_error(get_error_message(Error.VOID_IN_EXPRESION))
+            self.p_error(get_error_message(Error.VOID_IN_EXPRESION), var = p[1])
         # TODO check functionality with expresions of functions and arrays
         if symbol[Var.KIND] == Kind.FUNCTION:
             self.PilaO.append(self.get_next_temp())
