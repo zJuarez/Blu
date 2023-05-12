@@ -3,6 +3,7 @@ from ply.yacc import yacc
 from lex import MyLexer
 from SymbolTable import SymbolTable
 from SemanticCube import SemanticCube
+from Memoria import Memoria
 from State import *
 
 class MyParser:
@@ -20,6 +21,7 @@ class MyParser:
         initialVals = initialStateSymbols()
         for key,value in initialVals.items():
             self.curr_symbol_table.add_symbol(key, value)
+        self.memoria = Memoria()
         self.curr_state = State()
         self.PilaO = []
         self.POper = []
