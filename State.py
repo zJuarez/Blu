@@ -68,8 +68,10 @@ class Error(Enum):
     FUNCTION_PARAMS_DIFF = 17
     FUNCTION_PARAM_TYPE_MISMATCH = 18
     VOID_IN_EXPRESION = 19
+    FUNCTION_MUST_HAVE_RETURN = 20
+    FUNTION_RETURN_TYPE_MISMATCH = 21
 
-def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_type_mism = {}):
+def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_type_mism = {}, ret_type_mism = {} , msg = ""):
     if error == Error.REDECLARED_VARIABLE:
         return "Error : " + f"Variable '{var}' already declared"
     elif error == Error.VARIABLE_NOT_DECLARED:
@@ -83,7 +85,7 @@ def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_
     elif error == Error.IF_EXPRESSION_MUST_BE_BOOL:
         return "Error : If Expression must be bool"
     elif error == Error.INTERNAL_STACKS:
-        return "Internal Error involving STACKS"
+        return "Internal Error involving STACKS " + msg
     elif error == Error.FOR_EXPRESSION_MUST_BE_BOOL:
         return "Error : For Expression must be bool"
     elif error == Error.ALL_ARRAY_ELEMENTS_MUST_BE_SAME_TYPE:
@@ -108,6 +110,10 @@ def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_
         return "Error : " + f"Function '{fun_type_mism['id']}' was expecting on param '{fun_type_mism['param']}' type '{fun_type_mism['param_type']}' but got type '{fun_type_mism['arg_type']}'"
     elif error == Error.VOID_IN_EXPRESION:
         return "Error : Can't use void functions on expresions"
+    elif error == Error.FUNCTION_MUST_HAVE_RETURN:
+        return f"Error : Function '{var}' must have return statement at the end"
+    elif error == Error.FUNTION_RETURN_TYPE_MISMATCH:
+        return f"Error : Type mismatch on function '{ret_type_mism['var']}' of type {ret_type_mism['type']} is not the same as return expresion of type {ret_type_mism['ret_type']}"
     else:
         return "Error not found"
     
@@ -134,5 +140,7 @@ def get_tipo(tipo):
         return Tipo.BOOL
     elif tipo == "STRING":
         return Tipo.STRING
+    elif tipo == "VOID":
+        return Tipo.VOID
     else:
         return Tipo.NOT_DECLARED

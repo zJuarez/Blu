@@ -124,7 +124,7 @@ class MyParser:
         if self.PSaltosFunc:
             self.Quad[self.PSaltosFunc.pop()]+= (len(self.Quad),)
         else:
-            self.p_error(get_error_message(Error.INTERNAL_STACKS))
+            self.p_error(get_error_message(Error.INTERNAL_STACKS), msg = "PSaltosFun en p_funcion esta vacia")
         
         p[0] = ''
 
@@ -154,7 +154,7 @@ class MyParser:
         # traer el id de la funcion que acabamos de guardar
         id = self.FuncionID
         # traer el tipo de la funcion que acabamos de guardar
-        tipo = self.PTiposDec.pop()
+        tipo = self.PTiposDec[-1]
         # crear los atributos de la funcion con sus args y su tipo funcion
         function_attrs = {Var.ID : id, Var.TIPO : tipo, Var.ARGS : p[2], Var.KIND : Kind.FUNCTION}
 
@@ -194,7 +194,7 @@ class MyParser:
                 else:
                     seen_keys.add(key)
         if len(duplicated_keys) > 0:
-            self.p_error(Error.DUPLICATED_ARGS)
+            self.p_error(get_error_message(Error.DUPLICATED_ARGS))
         
         p[0] = p[1] + p[2]
 
@@ -229,11 +229,34 @@ class MyParser:
 
     def p_bloquefun(self, p):
         '''
-        bloquefun : LBRACKET bloquefunP RBRACKET
+        bloquefun : LBRACKET bloquefunP returnX RBRACKET
         '''
         # destroy block
         self.curr_symbol_table = self.curr_symbol_table.get_parent() 
         p[0] = ''
+    
+    def p_returnX(self,p):
+        '''
+        returnX : RETURN expresion
+        | empty
+        '''
+        if not self.PTiposDec:
+            self.p_error(get_error_message(Error.INTERNAL_STACKS, msg= "returnX ptiposdec"))
+
+        if p[1] == "empty" and self.PTiposDec[-1] != Tipo.VOID:
+            # DOT HAVE RETURN
+            self.p_error(get_error_message(Error.FUNCTION_MUST_HAVE_RETURN, var=self.FuncionID))
+
+        if p[1] != "empty" and self.PTiposDec[-1] != Tipo.VOID:
+            if not self.PilaO or not self.PTypes:
+                self.p_error(get_error_message(Error.INTERNAL_STACKS, msg= "returnX pilao o ptypes"))
+            type_of_return = self.PTypes.pop()
+            var_to_return = self.PilaO.pop()
+            type_of_fun = self.PTiposDec.pop()
+            if type_of_fun != type_of_return:
+                self.p_error(get_error_message(Error.FUNTION_RETURN_TYPE_MISMATCH, ret_type_mism={"var" : self.FuncionID, "type" : type_of_fun.value, "ret_type" : type_of_return.value}))
+            self.Quad.append(("RETURN", var_to_return))
+
 
     def p_bloquefunP(self, p):
         '''
@@ -682,7 +705,6 @@ class MyParser:
         '''
         declarar : tipo declararSimple declararP
         '''
-        
         # 11 limpiar curr state ?
         self.curr_state.clear()
         self.PTiposDec.pop()
@@ -1200,7 +1222,6 @@ class MyParser:
         symbol = self.curr_symbol_table.get_symbol(p[1])
         if (symbol is None):
             self.p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, p[1]))
-        
         if symbol[Var.TIPO] == Tipo.VOID:
             self.p_error(get_error_message(Error.VOID_IN_EXPRESION))
         # TODO check functionality with expresions of functions and arrays
