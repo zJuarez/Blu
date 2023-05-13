@@ -674,10 +674,13 @@ class MyParser:
                     # Ask about casts
                     self.Quad.append((QOp.EQUAL, self.PilaO.pop(), -1,var_dir))
                 else:
-                    self.p_error(get_error_message(Error.TYPE_MISMATCH))
+                    self.p_error(get_error_message(Error.TYPE_MISMATCH, type_mism={
+                        "operator" : "=",
+                        "left" : var_type,
+                        "right" : exp_type
+                    }))
             else:
                 self.p_error(get_error_message(Error.EXPRESSION_WENT_WRONG))
-            
         p[0] = ''
 
     def p_idAS(self, p):
@@ -734,7 +737,7 @@ class MyParser:
         else : 
             # 10 añadir la variable a la tabla de variables
             var = {Var.ID : id, Var.TIPO : self.PTiposDec[-1]} | p[2]
-            section = Section.GLOBAL if self.FuncionID == "" else Section.LOCAL
+            section = Section.GLOBAL if self.curr_symbol_table.is_declarated_in_block("GET_POS_X") else Section.LOCAL
             tipo = self.PTiposDec[-1]
             size = 1 if var[Var.KIND] == Kind.SINGLE else var[Var.DIM1] if var[Var.KIND] == Kind.ARRAY else var[Var.DIM1] * var[Var.DIM2]
             val = False if Var.VAL not in var else var[Var.VAL]

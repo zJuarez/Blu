@@ -69,10 +69,10 @@ class Memoria:
     # declarar variable (seccion, tipo) -> dar numero de dirVir
     def add(self, seccion, tipo, val = False, size = 1):
         if seccion == Section.CONST:
-            if val in self.constMap:
-                return self.constMap[val]
+            if str(val) in self.constMap:
+                return self.constMap[str(val)]
             else:
-                self.constMap[val] = self.memoryValues[seccion][tipo]
+                self.constMap[str(val)] = self.memoryValues[seccion][tipo]
         next_dir_vir = self.memoryValues[seccion][tipo]
         self.memoryValues[seccion][tipo]+=size # prepare mempory for next var
         # TODO how to store val ?
@@ -106,6 +106,7 @@ class Memoria:
         print(self.get_dif_of_section(Section.LOCAL))
         print(self.get_dif_of_section(Section.TEMP))
         print(self.get_dif_of_section(Section.CONST))
+        print(self.constMap)
 
     # TODO setear valor (dirVir, valor) -> poner el valor de dirvir
 
