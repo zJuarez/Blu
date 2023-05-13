@@ -164,7 +164,11 @@ class MyParser:
         # traer el tipo de la funcion que acabamos de guardar
         tipo = self.PTiposDec[-1]
         # crear los atributos de la funcion con sus args y su tipo funcion
-        function_attrs = {Var.ID : id, Var.TIPO : tipo, Var.ARGS : p[2], Var.KIND : Kind.FUNCTION, Var.DIR_VIR: self.memoria.add(Section.GLOBAL, tipo)}
+        function_attrs = {Var.ID : id, Var.TIPO : tipo, Var.ARGS : p[2], Var.KIND : Kind.FUNCTION}
+        # guardar en memoria global si no es void
+        glo = {Var.DIR_VIR : self.memoria.add(Section.GLOBAL, tipo)} if tipo != Tipo.VOID else {}
+
+        function_attrs|=glo
 
         # añadir a la tabla de simbolos actual para que pueda ser usada despues
         self.curr_symbol_table.add_symbol(id, function_attrs)
@@ -175,9 +179,7 @@ class MyParser:
         self.curr_symbol_table = SymbolTable(parent=self.curr_symbol_table)
         # los args deben de vivir dentro de este bloque -> añadir
         for args_object in p[2]:
-            self.curr_symbol_table.add_symbol_object(args_object | {Var.DIR_VIR : 
-                                                                    self.memoria.add(Section.LOCAL, self.get_type_of_symbol_obj(args_object))})
-        
+            self.curr_symbol_table.add_symbol_object(args_object)
         # devolver args si acaso sirve
         p[0] = p[2]
 
@@ -219,7 +221,8 @@ class MyParser:
         arg : tipo ID argP
         '''
         self.PTiposDec.pop()
-        var = {Var.ID : p[2], Var.TIPO : p[1]} | p[3]
+        # TODO what if arg is an array? what's size? 
+        var = {Var.ID : p[2], Var.TIPO : p[1], Var.DIR_VIR : self.memoria.add(Section.LOCAL, p[1])} | p[3]
         p[0] = [{p[2] : var}]
 
     def p_argP(self, p):
@@ -549,12 +552,12 @@ class MyParser:
             else:
                  self.curr_symbol_table.add_symbol(id, {Var.ID : id, Var.TIPO : p[3][Var.TIPO], 
                                                      Var.KIND : Kind.ARRAY, Var.DIM1 : p[3][Var.DIM2], Var.DIR_VIR : id_dir})
-            # starts at iterable id address
-            invisible_var = self.memoria.add(Section.TEMP, Tipo.INT, val=iterable_id)
+          
             # no tiene id cuando esta creando el array ahi ej ["RED", "BLUE", "GREEN"]
             dim2 = 1 if is_array else p[3][Var.DIM2]
-            iterable_id = p[3][Var.ID] if Var.ID in p[3] else self.memoria.add(Section.TEMP, p[3][Var.TIPO], size = p[3][Var.DIM1]*dim2)
-           
+            iterable_id = p[3][Var.ID][Var.DIR_VIR] if Var.ID in p[3] else self.memoria.add(Section.TEMP, p[3][Var.TIPO], size = p[3][Var.DIM1]*dim2)
+             # starts at iterable id address
+            invisible_var = self.memoria.add(Section.TEMP, Tipo.INT, val=iterable_id)
             # dejar migaja de pan para volver despues de asignar a evaluar
             self.PSaltosFor.append(len(self.Quad))
             exp_bool = self.memoria.add(Section.TEMP, Tipo.BOOL)
@@ -566,7 +569,6 @@ class MyParser:
             self.PSaltosFor.append(len(self.Quad) - 1)
             # asign id to the ith element
             self.Quad.append((QOp.EQUAL,invisible_var, '',id_dir))
-
             temp_var_suma = self.memoria.add(Section.TEMP, Tipo.INT)
              # Guardar los quads de asig TODO should the sum be 1 or the size of dim2 if exists
             asigQuads.append((QOp.PLUS, invisible_var, dim2, temp_var_suma))
