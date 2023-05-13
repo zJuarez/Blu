@@ -3,7 +3,7 @@ from ply.yacc import yacc
 from lex import MyLexer
 from SymbolTable import SymbolTable
 from SemanticCube import SemanticCube
-from Memoria import Memoria
+from Memoria import Memoria, Section
 from State import *
 
 class MyParser:
@@ -43,6 +43,12 @@ class MyParser:
         self.TempCount = self.TempCount + 1
         return temp_var
     
+    # helper function to get type from symbol_object {id: {Var.ID: ..., }}
+    def get_type_of_symbol_obj(self, symbol_obj):
+        symbol_id = list(symbol_obj.keys())[0]
+        tipo_var = symbol_obj[symbol_id][Var.TIPO]
+        return tipo_var
+    
     # using stacks and creating quads
     def handle_expresion_type(self):
         if self.PilaO and self.PTypes and self.POper:   
@@ -64,7 +70,8 @@ class MyParser:
             if res_type is None :
                 self.p_error(get_error_message(Error.TYPE_MISMATCH, type_mism=op))
             else:
-                temp_var = self.get_next_temp()
+                #TODO add valor? 
+                temp_var = self.memoria.add(Section.TEMP, res_type)
                 # create and push the quad
                 quad = (get_quad_operation_from_operator(operator), left_operand, right_operand, temp_var)
                 self.Quad.append(quad)
@@ -93,7 +100,7 @@ class MyParser:
         '''
         blu : codigo
         '''
-        self.Quad.append((QOp.END, ))
+        self.Quad.append((QOp.END, -1,-1,-1 ))
         p[0]=p[1]
 
     def p_codigo(self, p):
@@ -115,14 +122,19 @@ class MyParser:
         funcion : FUNCTION tipoFuncion idFun args bloquefun
         '''
         # 2 crear end func
-        self.Quad.append((QOp.ENDFUNC, ))
+        self.Quad.append((QOp.ENDFUNC, -1,-1,-1))
         # 2.1 rellenar goto de func
         if self.PSaltosFunc:
             self.Quad[self.PSaltosFunc.pop()]+= (len(self.Quad),)
         else:
             self.p_error(get_error_message(Error.INTERNAL_STACKS), msg = "PSaltosFun en p_funcion esta vacia")
         
-        p[0] = ''
+        
+        vars_used = self.memoria.end_mod()
+        symbol = self.func_table.get_symbol(self.FuncionID)
+        self.func_table.add_symbol(self.FuncionID, symbol | {Var.ERA : vars_used})
+        p[0] = self.FuncionID
+        self.FuncionID = '' # to know we are not longer in a function, aka global section
 
     def p_idFun(self, p):
         '''
@@ -152,7 +164,7 @@ class MyParser:
         # traer el tipo de la funcion que acabamos de guardar
         tipo = self.PTiposDec[-1]
         # crear los atributos de la funcion con sus args y su tipo funcion
-        function_attrs = {Var.ID : id, Var.TIPO : tipo, Var.ARGS : p[2], Var.KIND : Kind.FUNCTION}
+        function_attrs = {Var.ID : id, Var.TIPO : tipo, Var.ARGS : p[2], Var.KIND : Kind.FUNCTION, Var.DIR_VIR: self.memoria.add(Section.GLOBAL, tipo)}
 
         # añadir a la tabla de simbolos actual para que pueda ser usada despues
         self.curr_symbol_table.add_symbol(id, function_attrs)
@@ -163,8 +175,9 @@ class MyParser:
         self.curr_symbol_table = SymbolTable(parent=self.curr_symbol_table)
         # los args deben de vivir dentro de este bloque -> añadir
         for args_object in p[2]:
-            self.curr_symbol_table.add_symbol_object(args_object)
-
+            self.curr_symbol_table.add_symbol_object(args_object | {Var.DIR_VIR : 
+                                                                    self.memoria.add(Section.LOCAL, self.get_type_of_symbol_obj(args_object))})
+        
         # devolver args si acaso sirve
         p[0] = p[2]
 
@@ -251,7 +264,7 @@ class MyParser:
             type_of_fun = self.PTiposDec.pop()
             if type_of_fun != type_of_return:
                 self.p_error(get_error_message(Error.FUNTION_RETURN_TYPE_MISMATCH, ret_type_mism={"var" : self.FuncionID, "type" : type_of_fun.value, "ret_type" : type_of_return.value}))
-            self.Quad.append((QOp.RETURN, var_to_return))
+            self.Quad.append((QOp.RETURN, var_to_return, -1, -1))
 
 
     def p_bloquefunP(self, p):
@@ -463,23 +476,18 @@ class MyParser:
         asigQuads = []
         # loop X times
         if len(p) == 2:
-            invisible_var = self.get_next_temp()
-            # create invisible_id is starting in 1
-            # TODO do we need to add this to the symbol table?
-            symbol = {invisible_var : {Var.ID: invisible_var, Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : 1}}
-            # adding invisible id as cont in block
-            self.curr_symbol_table.add_symbol_object(symbol)
+            invisible_var = self.memoria.add(Section.TEMP, Tipo.INT, 1)
 
             # dejar migaja de pan para volver despues a asignar y evaluar
             self.PSaltosFor.append(len(self.Quad))
 
-            temp_var_suma = self.get_next_temp()
+            temp_var_suma = self.memoria.add(Section.TEMP, Tipo.INT)
 
             # Guardar los quads de asig
             asigQuads.append((QOp.PLUS, invisible_var, 1, temp_var_suma))
-            asigQuads.append((QOp.EQUAL, temp_var_suma, '',invisible_var))
+            asigQuads.append((QOp.EQUAL, temp_var_suma, '', invisible_var))
 
-            temp_var_bool = self.get_next_temp()
+            temp_var_bool = self.memoria.add(Section.TEMP, Tipo.INT)
 
             # generar quad de expresion
             sup_limit = p[1][0]
@@ -495,19 +503,20 @@ class MyParser:
         # p[1] is a string = id
         if len(p) == 6 and not isinstance(p[1], dict):
             id = p[1]
-            symbol = {id : {Var.ID: id, Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : p[3][0]}}
+            id_dir = self.memoria.add(Section.LOCAL, Tipo.INT, p[3][0])
+            symbol = {id : {Var.ID: id, Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : p[3][0], Var.DIR_VIR : id_dir}}
             # adding id as cont in block
             self.curr_symbol_table.add_symbol_object(symbol)
             # dejar migaja de pan para volver despues de asignar a evaluar
             self.PSaltosFor.append(len(self.Quad))
             
-            temp_var_suma = self.get_next_temp()
+            temp_var_suma = self.memoria.add(Section.TEMP, Tipo.INT)
 
             # Guardar los quads de asig
-            asigQuads.append((QOp.PLUS, id, 1, temp_var_suma))
-            asigQuads.append((QOp.EQUAL, temp_var_suma, '',id))
+            asigQuads.append((QOp.PLUS, id_dir, 1, temp_var_suma))
+            asigQuads.append((QOp.EQUAL, temp_var_suma, '',id_dir))
 
-            temp_var_bool = self.get_next_temp()
+            temp_var_bool = self.memoria.add(Section.TEMP, Tipo.BOOL)
 
             # generar quad de expresion
             sup_limit = p[5][0]
@@ -531,40 +540,36 @@ class MyParser:
             # deducir que tipo de variable es id y que kind y agregarla
             # usar p[3] para deducr esto
             id = p[1]
-            if p[3][Var.KIND] == Kind.ARRAY:
+            is_array = p[3][Var.KIND] == Kind.ARRAY
+            size = 1 if is_array else p[3][Var.DIM1]
+            id_dir = self.memoria.add(Section.LOCAL, p[3][Var.TIPO], size=size) # memory for the var who is going to iterate the iterable_var
+            if is_array:
                 self.curr_symbol_table.add_symbol(id, {Var.ID : id, Var.TIPO : p[3][Var.TIPO], 
-                                                     Var.KIND : Kind.SINGLE})
+                                                     Var.KIND : Kind.SINGLE, Var.DIR_VIR : id_dir})
             else:
                  self.curr_symbol_table.add_symbol(id, {Var.ID : id, Var.TIPO : p[3][Var.TIPO], 
-                                                     Var.KIND : Kind.ARRAY, Var.DIM1 : p[3][Var.DIM2]})
-            invisible_var = self.get_next_temp()
-            # create invisible_id is starting in 0
-            # TODO do we need to add this to the symbol table?
-            symbol = {invisible_var : {Var.ID: invisible_var, Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : 0}}
-            # adding invisible id as cont in block
-            self.curr_symbol_table.add_symbol_object(symbol)
-            
-            iterable_id = p[3][Var.ID] if Var.ID in p[3] else self.get_next_temp()
-            # it's created on the spot. lets give it an invisible name
-            if Var.ID not in p[3]:
-                symbol = {iterable_id : {Var.ID: iterable_id} | p[3]}
-                self.curr_symbol_table.add_symbol_object(symbol)
-
+                                                     Var.KIND : Kind.ARRAY, Var.DIM1 : p[3][Var.DIM2], Var.DIR_VIR : id_dir})
+            # starts at iterable id address
+            invisible_var = self.memoria.add(Section.TEMP, Tipo.INT, val=iterable_id)
+            # no tiene id cuando esta creando el array ahi ej ["RED", "BLUE", "GREEN"]
+            dim2 = 1 if is_array else p[3][Var.DIM2]
+            iterable_id = p[3][Var.ID] if Var.ID in p[3] else self.memoria.add(Section.TEMP, p[3][Var.TIPO], size = p[3][Var.DIM1]*dim2)
+           
             # dejar migaja de pan para volver despues de asignar a evaluar
             self.PSaltosFor.append(len(self.Quad))
-            exp_bool = self.get_next_temp()
-            # exp quad
-            self.Quad.append((QOp.LCOMP, invisible_var, p[3][Var.DIM1], exp_bool))
+            exp_bool = self.memoria.add(Section.TEMP, Tipo.BOOL)
+            # exp quad till the size of the iterable id is over
+            self.Quad.append((QOp.LCOMP, invisible_var, iterable_id + p[3][Var.DIM1], exp_bool))
             # generar gotof, luego rellenamos
-            self.Quad.append((QOp.GOTO, exp_bool))
+            self.Quad.append((QOp.GOTOF, exp_bool))
             # pushear gotof que despues se rellenara con el final del for
             self.PSaltosFor.append(len(self.Quad) - 1)
             # asign id to the ith element
-            self.Quad.append((QOp.EQUAL,(iterable_id, invisible_var), '',id))
+            self.Quad.append((QOp.EQUAL,invisible_var, '',id_dir))
 
-            temp_var_suma = self.get_next_temp()
-             # Guardar los quads de asig
-            asigQuads.append((QOp.PLUS, invisible_var, 1, temp_var_suma))
+            temp_var_suma = self.memoria.add(Section.TEMP, Tipo.INT)
+             # Guardar los quads de asig TODO should the sum be 1 or the size of dim2 if exists
+            asigQuads.append((QOp.PLUS, invisible_var, dim2, temp_var_suma))
             asigQuads.append((QOp.EQUAL, temp_var_suma, '',invisible_var))
             
         
@@ -595,7 +600,7 @@ class MyParser:
         self.PSaltosFor.append(len(self.Quad))
         p[0] = '' 
 
-
+        # used in regular for
     def p_decSimple(self, p):
         '''
         decSimple : tipo ID EQUAL expresion
@@ -605,7 +610,8 @@ class MyParser:
             # check type mismatch
             if p[1] != tipo_exp:
                  self.p_error(get_error_message(Error.TYPE_MISMATCH))
-            symbol = {p[2] : {Var.ID: p[2], Var.TIPO : p[1], Var.KIND : Kind.SINGLE, Var.VAL : self.PilaO.pop()}}
+            val = self.PilaO.pop()
+            symbol = {p[2] : {Var.ID: p[2], Var.TIPO : p[1], Var.KIND : Kind.SINGLE, Var.VAL : val, Var.DIR_VIR : self.memoria.add(Section.LOCAL, p[1], val)}}
             # adding dec simple to table
             self.curr_symbol_table.add_symbol_object(symbol)
             p[0] = symbol
@@ -654,18 +660,19 @@ class MyParser:
         # should be idAS checks for vars not declared
         if(var_symbol is not None):
             var_type = var_symbol[Var.TIPO]
+            var_dir = var_symbol[Var.DIR_VIR]
             # expression type should be in the top of the stack of expressions
             if self.PTypes and self.PilaO:
                 exp_type = self.PTypes.pop()
                 if(var_type == exp_type):
                     # same type! create quad
-                    self.Quad.append((QOp.EQUAL, self.PilaO.pop(), '',var_id))
+                    self.Quad.append((QOp.EQUAL, self.PilaO.pop(), -1,var_dir))
                 elif(var_type == Tipo.INT and exp_type == Tipo.FLOAT):
                     # TODO Ask about casts
-                    self.Quad.append((QOp.EQUAL, self.PilaO.pop(), '',var_id))
+                    self.Quad.append((QOp.EQUAL, self.PilaO.pop(), -1,var_dir))
                 elif(var_type == Tipo.FLOAT and exp_type == Tipo.INT):
                     # Ask about casts
-                    self.Quad.append((QOp.EQUAL, self.PilaO.pop(), '',var_id))
+                    self.Quad.append((QOp.EQUAL, self.PilaO.pop(), -1,var_dir))
                 else:
                     self.p_error(get_error_message(Error.TYPE_MISMATCH))
             else:
@@ -727,7 +734,12 @@ class MyParser:
         else : 
             # 10 añadir la variable a la tabla de variables
             var = {Var.ID : id, Var.TIPO : self.PTiposDec[-1]} | p[2]
-            self.curr_symbol_table.add_symbol(id, var)
+            section = Section.GLOBAL if self.FuncionID == "" else Section.LOCAL
+            tipo = self.PTiposDec[-1]
+            size = 1 if var[Var.KIND] == Kind.SINGLE else var[Var.DIM1] if var[Var.KIND] == Kind.ARRAY else var[Var.DIM1] * var[Var.DIM2]
+            val = False if Var.VAL not in var else var[Var.VAL]
+            dir_vir = self.memoria.add(section, tipo, val, size)
+            self.curr_symbol_table.add_symbol(id, var | {Var.DIR_VIR : dir_vir})
             # print("añadiendo a la tabla " + str(id))
         p[0] = var
     
@@ -1023,8 +1035,8 @@ class MyParser:
         if self.PArgsCont[-1] == params_len:
             self.p_error(get_error_message(Error.FUNCTION_PARAMS_DIFF,  id, {}, params_len))
 
-        param_id = list(self.func_table.get_symbol(id)[Var.ARGS][self.PArgsCont[-1]].keys())[0]
-        tipo_param = self.func_table.get_symbol(id)[Var.ARGS][self.PArgsCont[-1]][param_id][Var.TIPO]
+        tipo_param = self.get_type_of_symbol_obj(self.func_table.get_symbol(id)[Var.ARGS][self.PArgsCont[-1]])
+
         tipo_arg = self.PTypes.pop()
         if tipo_arg != tipo_param:
             fun_type_mism = {
@@ -1203,9 +1215,11 @@ class MyParser:
         | CCTE
         | bcte
         '''
-        # forma (Var.Val, Var.Tipo)
+        # crear const en memoria
+        dir = self.memoria.add(Section.CONST, p[1][1], p[1][0])
+                # forma (Var.Val, Var.Tipo)
         # append el id de la expresion a la pila 
-        self.PilaO.append(p[1][0])
+        self.PilaO.append(dir)
         # append el tipo
         self.PTypes.append(p[1][1])
         p[0] = p[1] 
@@ -1222,10 +1236,11 @@ class MyParser:
         if symbol[Var.TIPO] == Tipo.VOID:
             self.p_error(get_error_message(Error.VOID_IN_EXPRESION), var = p[1])
         # TODO check functionality with expresions of functions and arrays
+        # TODO check above and add value?
         if symbol[Var.KIND] == Kind.FUNCTION:
-            self.PilaO.append(self.get_next_temp())
+            self.PilaO.append(self.memoria.add(Section.TEMP, symbol[Var.TIPO]))
         else: # append el id de la expresion a la pila 
-            self.PilaO.append(p[1])
+            self.PilaO.append(symbol[Var.DIR_VIR])
         # append el tipo
         self.PTypes.append(symbol[Var.TIPO])
         # devolver algo interesante
@@ -1243,7 +1258,8 @@ class MyParser:
         | GET_ORIENTATION
         '''
         # append el id de la expresion a la pila 
-        self.PilaO.append(p[1])
+        state = initialStateSymbols()
+        self.PilaO.append(state[p[1]][Var.DIR_VIR])
         # append el tipo
         symbol = self.curr_symbol_table.get_symbol(p[1])
         self.PTypes.append(symbol[Var.TIPO])
@@ -1298,6 +1314,7 @@ class MyParser:
             result = self.parser.parse(text, lexer=self.lexer.lexer)
             for i,quad in enumerate(self.Quad):
                 print(str(i) + ". " + str(quad)) 
+            self.memoria.print()
             return result
         except Exception as e:
             return e

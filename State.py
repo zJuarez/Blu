@@ -28,6 +28,7 @@ class Var(Enum):
     DIM2 = 6
     ARGS = 7
     DIR_VIR = 8
+    ERA = 9
 
 class Kind(Enum):
     SINGLE = 1

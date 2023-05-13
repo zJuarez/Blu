@@ -10,13 +10,23 @@ class Section(Enum):
 
 class Memoria:
     def __init__(self):
+        self.default = {
+            Tipo.INT : 0,
+            Tipo.BOOL : False,
+            Tipo.CHAR : '',
+            Tipo.FLOAT : 0.0,
+            Tipo.STRING : "",
+        }
+        self.constMap = {}
+        self.memoryValues = self.get_initial_memory_values()
+
+    def get_initial_memory_values(self): 
         first = 1000
         gap = 9000
-        glob = first
-        loca = first + gap
-        temp =  first + 2*gap
-        cons = first + 3*gap
-
+        glob = first # [1000, 10,000)
+        loca = first + gap # [10000, 19,000)
+        temp =  first + 2*gap # [19000, 28,000)
+        cons = first + 3*gap # [28000, 37,000)
         size = {Tipo.INT : 2000, 
                 Tipo.FLOAT : 2000, 
                 Tipo.BOOL : 2500, 
@@ -29,7 +39,7 @@ class Memoria:
                 Tipo.STRING : size[Tipo.INT] + size[Tipo.FLOAT] + size[Tipo.BOOL] + size[Tipo.CHAR] }
         
         # STORES NEXT DIRVIR given its section and type
-        self.initialMemoryValues = {
+        return {
             Section.GLOBAL : {
                 Tipo.INT : glob, 
                 Tipo.FLOAT : glob + start[Tipo.FLOAT], 
@@ -55,40 +65,47 @@ class Memoria:
                 Tipo.CHAR : cons + start[Tipo.CHAR], 
                 Tipo.STRING : cons + start[Tipo.STRING]},
         }
-        self.memoryValues = self.initialMemoryValues
 
     # declarar variable (seccion, tipo) -> dar numero de dirVir
-    def get_next_dir_vir(self, seccion, tipo):
+    def add(self, seccion, tipo, val = False, size = 1):
+        if seccion == Section.CONST:
+            if val in self.constMap:
+                return self.constMap[val]
+            else:
+                self.constMap[val] = self.memoryValues[seccion][tipo]
         next_dir_vir = self.memoryValues[seccion][tipo]
-        self.memoryValues[seccion][tipo]+=1 # prepare mempory for next var
+        self.memoryValues[seccion][tipo]+=size # prepare mempory for next var
+        # TODO how to store val ?
+        val = val if val != False else self.default[tipo]
         return next_dir_vir
     
-
     # end mod () -> resetear temp y local a inicial. returnear tamano de memoria que uso en el mod
     def end_mod(self):
-        memoryUsedInMod = {
-            Section.LOCAL : {
-                Tipo.INT : self.get_dif(Section.LOCAL, Tipo.INT), 
-                Tipo.FLOAT : self.get_dif(Section.LOCAL, Tipo.FLOAT), 
-                Tipo.BOOL : self.get_dif(Section.LOCAL, Tipo.BOOL), 
-                Tipo.CHAR : self.get_dif(Section.LOCAL, Tipo.CHAR), 
-                Tipo.STRING : self.get_dif(Section.LOCAL, Tipo.STRING),
-                },
-            Section.TEMP : {
-                Tipo.INT : self.get_dif(Section.TEMP, Tipo.INT), 
-                Tipo.FLOAT : self.get_dif(Section.TEMP, Tipo.FLOAT), 
-                Tipo.BOOL : self.get_dif(Section.TEMP, Tipo.BOOL), 
-                Tipo.CHAR : self.get_dif(Section.TEMP, Tipo.CHAR), 
-                Tipo.STRING : self.get_dif(Section.TEMP, Tipo.STRING),
+        memoryUsedInMod = self.get_dif_of_section(Section.LOCAL) | self.get_dif_of_section(Section.TEMP)
+        self.memoryValues[Section.LOCAL] = self.get_initial_memory_values()[Section.LOCAL] 
+        self.memoryValues[Section.TEMP] = self.get_initial_memory_values()[Section.TEMP] 
+        return memoryUsedInMod
+    
+    def get_dif_of_section(self, section):
+        return {
+            section : {
+                Tipo.INT : self.get_dif(section, Tipo.INT), 
+                Tipo.FLOAT : self.get_dif(section, Tipo.FLOAT), 
+                Tipo.BOOL : self.get_dif(section, Tipo.BOOL), 
+                Tipo.CHAR : self.get_dif(section, Tipo.CHAR), 
+                Tipo.STRING : self.get_dif(section, Tipo.STRING),
                 },
             }
-        self.memoryValues[Section.LOCAL] =  self.memoryInitialValues[Section.LOCAL] 
-        self.memoryValues[Section.TEMP] =  self.memoryInitialValues[Section.TEMP] 
-        return memoryUsedInMod
     
     # helper fun to get memory used in scope
     def get_dif(self, seccion, tipo):
-        return self.memoryValues[seccion][tipo] - self.initialMemoryValues[seccion][tipo]
+        return self.memoryValues[seccion][tipo] - self.get_initial_memory_values()[seccion][tipo]
+    
+    def print(self):
+        print(self.get_dif_of_section(Section.GLOBAL))
+        print(self.get_dif_of_section(Section.LOCAL))
+        print(self.get_dif_of_section(Section.TEMP))
+        print(self.get_dif_of_section(Section.CONST))
 
     # TODO setear valor (dirVir, valor) -> poner el valor de dirvir
 

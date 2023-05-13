@@ -18,7 +18,7 @@ class SymbolTable:
     
     def print(self):
         print(self.symbols)
-        
+    
     # get symbol information given its id
     def get_symbol(self, name):
         symbol_table = self

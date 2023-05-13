@@ -1,7 +1,10 @@
-INT t = 0
+INT t = 0, x = 2
 t = 2
 FOR(5){
     INT x = 2
     x = 8 * 1
+    BOOL y = TRUE
+    t = FALSE
 }
 t = 1
+x = 3 + 2
