@@ -29,6 +29,7 @@ class Var(Enum):
     ARGS = 7
     DIR_VIR = 8
     ERA = 9
+    QUAD = 10
 
 class Kind(Enum):
     SINGLE = 1
@@ -72,6 +73,9 @@ class Error(Enum):
     VOID_IN_EXPRESION = 19
     FUNCTION_MUST_HAVE_RETURN = 20
     FUNTION_RETURN_TYPE_MISMATCH = 21
+    ASSIGNATION_WENT_WRONG = 22
+    EXPRESSION_MUST_BE_NUMERIC = 23
+    EXPRESSION_MUST_BE_STRING = 24
 
 class QOp(Enum):
     EQUAL = 0
@@ -107,6 +111,8 @@ class QOp(Enum):
     ENDFUNC = 30
     RETURN = 31
     END = 32
+    EQUALP = 33
+    SET_ARRAY = 34
 
 operator_to_quadop = {
     "=" : QOp.EQUAL,
@@ -143,7 +149,7 @@ def get_quad_operation_from_operator(operator):
 def get_quad_operation_from_state(state):
     return state_toquadop[state]
 
-def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_type_mism = {}, ret_type_mism = {} , msg = ""):
+def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_type_mism = {}, ret_type_mism = {} , msg = "", ass = {}):
     if error == Error.REDECLARED_VARIABLE:
         return "Error : " + f"Variable '{var}' already declared"
     elif error == Error.VARIABLE_NOT_DECLARED:
@@ -186,6 +192,12 @@ def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_
         return f"Error : Function '{var}' must have return statement at the end"
     elif error == Error.FUNTION_RETURN_TYPE_MISMATCH:
         return f"Error : Type mismatch on function '{ret_type_mism['var']}' of type {ret_type_mism['type']} is not the same as return : QOp.BG, of type {ret_type_mism['ret_type']}"
+    elif error == Error.ASSIGNATION_WENT_WRONG:
+        return f"Error : '{ass['var']}' is a {ass['kind']} and it's being assigned as a {ass['kind_ass']}" 
+    elif error == Error.EXPRESSION_MUST_BE_NUMERIC:
+        return f"Error : {var} expresions must be numeric"
+    elif error == Error.EXPRESSION_MUST_BE_STRING:
+        return f"Error : {var} expresions must be string"
     else:
         return "Error not found"
     

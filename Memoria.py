@@ -18,6 +18,7 @@ class Memoria:
             Tipo.STRING : "",
         }
         self.constMap = {}
+        self.cmemory = {}
         self.memoryValues = self.get_initial_memory_values()
 
     def get_initial_memory_values(self): 
@@ -73,6 +74,7 @@ class Memoria:
                 return self.constMap[str(val)]
             else:
                 self.constMap[str(val)] = self.memoryValues[seccion][tipo]
+                self.cmemory[self.memoryValues[seccion][tipo]] = val
         next_dir_vir = self.memoryValues[seccion][tipo]
         self.memoryValues[seccion][tipo]+=size # prepare mempory for next var
         # TODO how to store val ?
@@ -107,6 +109,7 @@ class Memoria:
         print(self.get_dif_of_section(Section.TEMP))
         print(self.get_dif_of_section(Section.CONST))
         print(self.constMap)
-
-    # TODO setear valor (dirVir, valor) -> poner el valor de dirvir
+    
+    def get_const_map(self):
+        return self.cmemory
 

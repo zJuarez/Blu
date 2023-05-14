@@ -1,6 +1,3 @@
-INT t = 2-23
-t = 2
 FOR(x, 1, 10){
     PRINT x
 }
-t = 1

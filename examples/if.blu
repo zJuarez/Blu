@@ -1,14 +1,13 @@
 INT money = 8, papa = 0
-BOOL c
+BOOL c = TRUE
 IF(money > 8){
-    INT money = 4
-    money = 4 + money
+    PRINT "HERE"
 }ELSE{
-    money = papa
+    PRINT "LOG1"
     IF(c){
-        c = FALSE
+        PRINT "LOG2"
     }ELSE {
-        c = FALSE
+        PRINT "LOG3"
     }
 }
 papa = 1

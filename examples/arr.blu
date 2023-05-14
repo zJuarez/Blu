@@ -1,0 +1,3 @@
+INT x = 4
+INT y = x*8 + 2
+PRINT y
