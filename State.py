@@ -76,6 +76,7 @@ class Error(Enum):
     ASSIGNATION_WENT_WRONG = 22
     EXPRESSION_MUST_BE_NUMERIC = 23
     EXPRESSION_MUST_BE_STRING = 24
+    EXPRESSION_MUST_BE_ARRAY = 25
 
 class QOp(Enum):
     EQUAL = 0
@@ -198,6 +199,8 @@ def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_
         return f"Error : {var} expresions must be numeric"
     elif error == Error.EXPRESSION_MUST_BE_STRING:
         return f"Error : {var} expresions must be string"
+    elif error == Error.EXPRESSION_MUST_BE_ARRAY:
+        return f"Error : Exp in for must be array only"
     else:
         return "Error not found"
     

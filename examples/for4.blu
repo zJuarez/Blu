@@ -1,8 +1,3 @@
-INT mat[3][4] = [[1,2,3,3], [4,5,6,7], [7,8,9,11]]
-
-FOR(list IN mat){
-    PRINT "inside"
-    FOR(e IN list){
-        PRINT e
-    }
+FOR(color IN ["RED", "BLU", "GREEN"]){
+    PRINT color
 }

@@ -539,37 +539,40 @@ class MyParser:
             # remover quads from global stack to be pushed after for block ends
             del self.Quad[-n_elem_of_asig:]
         
-        # looping arrays
+        # MATRIXES ARE GETTING HARD
+        # KEEP ONLY ARRAYS FOR NOW
+        # looping arrays LETS ASSUME 
         if(len(p) == 4):
             # deducir que tipo de variable es id y que kind y agregarla
             # usar p[3] para deducr esto
             id = p[1]
             is_array = p[3][Var.KIND] == Kind.ARRAY
-            size = 1 if is_array else p[3][Var.DIM1]
+            if is_array == False:
+                self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_ARRAY))
+
+            size = 1 if is_array else p[3][Var.DIM2]
             # memory for the var who is going to iterate the iterable_var
-            id_dir = self.memoria.add(Section.LOCAL, p[3][Var.TIPO], size=size) 
-            if is_array:
-                self.curr_symbol_table.add_symbol(id, {Var.ID : id, Var.TIPO : p[3][Var.TIPO], 
+            id_dir = self.memoria.add(Section.LOCAL, p[3][Var.TIPO]) 
+
+            self.curr_symbol_table.add_symbol(id, {Var.ID : id, Var.TIPO : p[3][Var.TIPO], 
                                                      Var.KIND : Kind.SINGLE, Var.DIR_VIR : id_dir})
-            else:
-                 self.curr_symbol_table.add_symbol(id, {Var.ID : id, Var.TIPO : p[3][Var.TIPO], 
-                                                     Var.KIND : Kind.ARRAY, Var.DIM1 : p[3][Var.DIM2], Var.DIR_VIR : id_dir})
+            
             # no tiene id cuando esta creando el array ahi ej ["RED", "BLUE", "GREEN"]
-            dim2 = 1 if is_array else p[3][Var.DIM2]
             iterable_id_dir = None
             if Var.ID in p[3]:
                 iterable_id_dir = p[3][Var.DIR_VIR]  
             else:
-                iterable_id_dir = self.memoria.add(Section.TEMP, p[3][Var.TIPO], size = p[3][Var.DIM1]*dim2)
+                iterable_id_dir = self.memoria.add(Section.TEMP, p[3][Var.TIPO], size = p[3][Var.DIM1])
                 self.Quad.append((QOp.SET_ARRAY, p[3][Var.VAL], -1, iterable_id_dir))
+
             # starts at iterable id address
             invisible_var = self.memoria.add(Section.TEMP, Tipo.INT, val=iterable_id_dir)
             self.Quad.append((QOp.EQUAL, self.memoria.add(Section.CONST, Tipo.INT, iterable_id_dir), -1, invisible_var))
-            self.Quad.append((QOp.EQUAL, iterable_id_dir, -1, id_dir))
+
             exp_bool = self.memoria.add(Section.TEMP, Tipo.BOOL)
-            sup_limit = self.memoria.add(Section.TEMP, Tipo.INT, val = iterable_id_dir + p[3][Var.DIM1]*dim2)
-            self.Quad.append((QOp.EQUAL, self.memoria.add(Section.CONST, Tipo.INT, iterable_id_dir + p[3][Var.DIM1]*dim2),-1, sup_limit))
-             # dejar migaja de pan para volver despues de asignar a evaluar
+            sup_limit = self.memoria.add(Section.TEMP, Tipo.INT, val = iterable_id_dir + p[3][Var.DIM1])
+            self.Quad.append((QOp.EQUAL, self.memoria.add(Section.CONST, Tipo.INT, iterable_id_dir + p[3][Var.DIM1]),-1, sup_limit))
+            # dejar migaja de pan para volver despues de asignar a evaluar
             self.PSaltosFor.append(len(self.Quad))
             # exp quad till the size of the iterable id is over
             self.Quad.append((QOp.LCOMP, invisible_var, sup_limit, exp_bool))
@@ -578,11 +581,11 @@ class MyParser:
             # pushear gotof que despues se rellenara con el final del for
             self.PSaltosFor.append(len(self.Quad) - 1)
             # asign id to the ith element
-            # this is wrong cause its assigning a int to a string or X type TODO store a pointer instead of int?
+            # equal to the value of the pointer instead of int
             self.Quad.append((QOp.EQUALP,invisible_var, '',id_dir))
             temp_var_suma = self.memoria.add(Section.TEMP, Tipo.INT)
              # Guardar los quads de asig TODO should the sum be 1 or the size of dim2 if exists
-            asigQuads.append((QOp.PLUS, invisible_var, self.memoria.add(Section.CONST, Tipo.INT, dim2), temp_var_suma))
+            asigQuads.append((QOp.PLUS, invisible_var, self.memoria.add(Section.CONST, Tipo.INT, 1), temp_var_suma))
             asigQuads.append((QOp.EQUAL, temp_var_suma, '',invisible_var))
             
         
