@@ -1,4 +1,4 @@
-from State import QOp, Var, initialStateSymbols
+from State import QOp, Var, initialStateSymbols, get_error_message, Error
 import math
 import time
 
@@ -20,27 +20,43 @@ class MaquinaVirtual:
     def read(self, dir_vir):
         first_local = 10000
         first_const = 28000
-        dir_vir = dir_vir
-        if dir_vir < first_local:
-            if dir_vir not in self.gmemory:
-                raise Exception(f"Var with {dir_vir} was read and is not in gmemory ")
-            ret = self.gmemory[dir_vir]
+        my_dir_vir = 0
+        if isinstance(dir_vir, int):
+            my_dir_vir = dir_vir
+        else:
+            # is an array(3) or matrix(5)
+            if len(dir_vir) == 3:
+                index = self.read(dir_vir[1])
+                if index < 0 or index >= dir_vir[2]:
+                    raise Exception(get_error_message(Error.OUT_OF_BOUNDS))
+                my_dir_vir = dir_vir[0]+index
+            elif len(dir_vir) == 5:
+                index_1 = self.read(dir_vir[1])
+                index_2 = self.read(dir_vir[3])
+                if index_1 < 0 or index_1 >= dir_vir[2] or index_2 < 0 or index_2>= dir_vir[4]:
+                    raise Exception(get_error_message(Error.OUT_OF_BOUNDS))
+                my_dir_vir = dir_vir[0]+index_1*dir_vir[4] + index_2
+                
+        if my_dir_vir < first_local:
+            if my_dir_vir not in self.gmemory:
+                raise Exception(f"Var with {my_dir_vir} was read and is not in gmemory ")
+            ret = self.gmemory[my_dir_vir]
             if ret is None:
-                raise Exception(f"Var with {dir_vir} was referenced before assignment ")
+                raise Exception(f"Var with {my_dir_vir} was referenced before assignment ")
             return ret
-        elif dir_vir < first_const:
-            if dir_vir not in self.lmemory:
-                raise Exception(f"Var with {dir_vir} was read and is not in lmemory ")
-            ret = self.lmemory[dir_vir]
+        elif my_dir_vir < first_const:
+            if my_dir_vir not in self.lmemory:
+                raise Exception(f"Var with {my_dir_vir} was read and is not in lmemory ")
+            ret = self.lmemory[my_dir_vir]
             if ret is None:
-                raise Exception(f"Var with {dir_vir} was referenced before assignment  ")
+                raise Exception(f"Var with {my_dir_vir} was referenced before assignment  ")
             return ret
         else:
-            if dir_vir not in self.cmemory:
-                raise Exception(f"Var with {dir_vir} was read and is not in cmemory ")
-            ret = self.cmemory[dir_vir]
+            if my_dir_vir not in self.cmemory:
+                raise Exception(f"Var with {my_dir_vir} was read and is not in cmemory ")
+            ret = self.cmemory[my_dir_vir]
             if ret is None:
-                raise Exception(f"Var with {dir_vir} was referenced before assignment ")
+                raise Exception(f"Var with {my_dir_vir} was referenced before assignment ")
             return ret
     
     def write(self, dir_vir, val = None):
@@ -59,7 +75,7 @@ class MaquinaVirtual:
         while pc < len(self.quads):
             q = self.quads[pc]
             op = q[0]
-            print(pc)
+            #print(pc)
            # switch statement using QOp enumeration
             if op == QOp.EQUAL:
                 self.write(q[3], None if q[1] is None else self.read(q[1]))

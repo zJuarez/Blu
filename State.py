@@ -77,6 +77,9 @@ class Error(Enum):
     EXPRESSION_MUST_BE_NUMERIC = 23
     EXPRESSION_MUST_BE_STRING = 24
     EXPRESSION_MUST_BE_ARRAY = 25
+    ID_NEEDS_SQUARE_BRACKETS = 26
+    EXPRESSION_INSIDE_SQUARE_BRACKETS_MUST_BE_INT = 27
+    OUT_OF_BOUNDS = 28
 
 class QOp(Enum):
     EQUAL = 0
@@ -150,7 +153,7 @@ def get_quad_operation_from_operator(operator):
 def get_quad_operation_from_state(state):
     return state_toquadop[state]
 
-def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_type_mism = {}, ret_type_mism = {} , msg = "", ass = {}):
+def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_type_mism = {}, ret_type_mism = {} , msg = "", ass = {}, type=""):
     if error == Error.REDECLARED_VARIABLE:
         return "Error : " + f"Variable '{var}' already declared"
     elif error == Error.VARIABLE_NOT_DECLARED:
@@ -201,6 +204,12 @@ def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_
         return f"Error : {var} expresions must be string"
     elif error == Error.EXPRESSION_MUST_BE_ARRAY:
         return f"Error : Exp in for must be array only"
+    elif error == Error.ID_NEEDS_SQUARE_BRACKETS:
+        return f"Error : {var} is {type} type and needs square brackets"
+    elif error == Error.EXPRESSION_INSIDE_SQUARE_BRACKETS_MUST_BE_INT:
+        return "Error : Expression inside square brackets must be int type"
+    elif error == Error.OUT_OF_BOUNDS:
+        return "Error : Out of bounds"
     else:
         return "Error not found"
     

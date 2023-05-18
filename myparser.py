@@ -1280,13 +1280,46 @@ class MyParser:
         if (symbol is None):
             self.p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, p[1]))
         if symbol[Var.TIPO] == Tipo.VOID:
-            self.p_error(get_error_message(Error.VOID_IN_EXPRESION), var = p[1])
-        # TODO check functionality with expresions of functions and arrays
-        # TODO check above and add value?
-        if symbol[Var.KIND] == Kind.FUNCTION:
+            self.p_error(get_error_message(Error.VOID_IN_EXPRESION, var = p[1]))
+        elif symbol[Var.KIND] == Kind.FUNCTION:
+            # temporal to PilaO
             self.PilaO.append(self.memoria.add(Section.TEMP, symbol[Var.TIPO]))
-        else: # append el id de la expresion a la pila 
+        elif symbol[Var.KIND] == Kind.SINGLE:
+            # lo usaste como array [] error
+            if p[2] != Kind.SINGLE:
+                self.p_error(get_error_message(Error.ID_IS_NOT_ITERABLE, var = p[1]))
+            # add single var dir to PilaO
             self.PilaO.append(symbol[Var.DIR_VIR])
+        # is array o matrix
+        else:
+            # using arrays and matrix as they are not.
+            if p[2] == Kind.SINGLE or (p[2] == Kind.ARRAY and symbol[Var.KIND] == Kind.MATRIX) or (p[2] == Kind.MATRIX and symbol[Var.KIND] == Kind.ARRAY):
+                self.p_error(get_error_message(Error.ID_NEEDS_SQUARE_BRACKETS, var = p[1], type=symbol[Var.KIND].name))
+            if p[2] == Kind.ARRAY:
+                if self.PilaO and self.PTypes:
+                    index_type = self.PTypes.pop()
+                    index_dir_vir = self.PilaO.pop()
+                    if index_type != Tipo.INT:
+                        self.p_error(get_error_message(Error.EXPRESSION_INSIDE_SQUARE_BRACKETS_MUST_BE_INT))
+                    dir_vir_array_start= symbol[Var.DIR_VIR]
+                    dir_vir_array_indexed = (dir_vir_array_start, index_dir_vir, symbol[Var.DIM1])
+                    self.PilaO.append(dir_vir_array_indexed)
+                else:
+                    self.p_error(get_error_message(Error.INTERNAL_STACKS))
+            else:
+                if len(self.PilaO)>1 and len(self.PTypes)>1:
+                    index_type_dim2 = self.PTypes.pop()
+                    index_dir_vir_dim2 = self.PilaO.pop()
+                    index_type_dim1 = self.PTypes.pop()
+                    index_dir_vir_dim1 = self.PilaO.pop()
+                    if index_type_dim2 != Tipo.INT or index_type_dim1 != Tipo.INT:
+                        self.p_error(get_error_message(Error.EXPRESSION_INSIDE_SQUARE_BRACKETS_MUST_BE_INT))
+                    dir_vir_array_start= symbol[Var.DIR_VIR]
+                    dir_vir_array_indexed = (dir_vir_array_start, index_dir_vir_dim1, symbol[Var.DIM1], index_dir_vir_dim2, symbol[Var.DIM2])
+                    self.PilaO.append(dir_vir_array_indexed)
+                else:
+                    self.p_error(get_error_message(Error.INTERNAL_STACKS))
+           
         # append el tipo
         self.PTypes.append(symbol[Var.TIPO])
         # devolver algo interesante
@@ -1317,20 +1350,20 @@ class MyParser:
         varP : varPArray
         | empty
         '''
-        p[0] = ''
+        p[0] = Kind.SINGLE if p[1] == "empty" else p[1]
 
     def p_varPArray(self, p):
         '''
         varPArray : LSQBRACKET expresion RSQBRACKET varPArrayP
         '''
-        p[0] = ''
+        p[0] = p[4]
 
     def p_varPArrayP(self, p):
         '''
         varPArrayP : LSQBRACKET expresion RSQBRACKET 
         | empty
         '''
-        p[0] = ''
+        p[0] = Kind.MATRIX if len(p) > 3 else Kind.ARRAY
 
     def p_bloque(self, p):
         '''
