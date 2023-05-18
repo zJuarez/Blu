@@ -163,7 +163,10 @@ class MaquinaVirtual:
                 self.write(8, self.read(q[1]))
             elif op == QOp.PRINT:
                 self.logs+=(str(self.read(q[1])))
-                self.logs+= '\n'
+                if q[3] :
+                    self.logs+= '\n'
+                else :
+                    self.logs+= " "
             elif op == QOp.ERA:
                 result = None
             elif op == QOp.GOSUB:

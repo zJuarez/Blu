@@ -2,6 +2,6 @@ INT x[4][2] = [[1,2],[3,4],[5,6],[7,8]]
 INT y = 2
 FOR (i,1,4){
     FOR(j,0,1){
-        PRINT y[i-1]
+        PRINT x[i-1][j] "yes" "bitch"
     }
 }

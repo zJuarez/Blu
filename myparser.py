@@ -678,10 +678,10 @@ class MyParser:
         # should be idAS checks for vars not declared
         if(var_symbol is not None):
             var_type = var_symbol[Var.TIPO]
-            var_dir = var_symbol[Var.DIR_VIR]
             var_kind = var_symbol[Var.KIND]
             if var_kind != p[2]:
                 self.p_error(get_error_message(Error.ASSIGNATION_WENT_WRONG, ass = {'var' : var_id, 'kind' : var_kind, 'kind_ass' : p[2]}))
+            var_dir = var_symbol[Var.DIR_VIR]
             # expression type should be in the top of the stack of expressions
             if self.PTypes and self.PilaO:
                 exp_type = self.PTypes.pop()
@@ -997,8 +997,16 @@ class MyParser:
         '''
         print : PRINT expresion printP 
         '''
-        while self.PilaO:
-            self.Quad.append((QOp.PRINT, self.PilaO.pop(), self.PTypes.pop()))
+        c = 0
+        exp_num = 1 + p[3]
+        exp = []
+        while c<exp_num:
+            exp.append((self.PilaO.pop(), self.PTypes.pop()))
+            c+=1
+        c=0
+        while c<exp_num:
+            self.Quad.append((QOp.PRINT,) +(exp.pop()) + (c == (exp_num-1),))
+            c+=1
         p[0] = 'PRINT'
 
     def p_printP(self, p):
@@ -1006,7 +1014,7 @@ class MyParser:
         printP : expresion printP
         | empty 
         '''
-        p[0] = ''
+        p[0] = 0 if p[1] == "empty" else p[2] + 1
 
     def p_llamar(self, p):
         '''
