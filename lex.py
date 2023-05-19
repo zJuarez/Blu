@@ -40,6 +40,7 @@ class MyLexer(object):
     'CURVE_Q' : 'CURVE_Q',
     'RETURN' : 'RETURN',
     'WHILE' : 'WHILE',
+    'ENDL' : 'ENDL',
     }
 
     # All tokens must be named in advance.

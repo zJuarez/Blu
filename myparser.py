@@ -71,7 +71,6 @@ class MyParser:
             if res_type is None :
                 self.p_error(get_error_message(Error.TYPE_MISMATCH, type_mism=op))
             else:
-                #TODO add valor? 
                 temp_var = self.memoria.add(Section.TEMP, res_type)
                 # create and push the quad
                 quad = (get_quad_operation_from_operator(operator), left_operand, right_operand, temp_var)
@@ -681,19 +680,40 @@ class MyParser:
             var_kind = var_symbol[Var.KIND]
             if var_kind != p[2]:
                 self.p_error(get_error_message(Error.ASSIGNATION_WENT_WRONG, ass = {'var' : var_id, 'kind' : var_kind, 'kind_ass' : p[2]}))
-            var_dir = var_symbol[Var.DIR_VIR]
             # expression type should be in the top of the stack of expressions
             if self.PTypes and self.PilaO:
                 exp_type = self.PTypes.pop()
+                dir_vir_of_exp = self.PilaO.pop()
+                var_dir = var_symbol[Var.DIR_VIR]
+                if p[2] == Kind.ARRAY:
+                    if self.PTypes and self.PilaO:
+                        index_dir = self.PilaO.pop()
+                        index_type = self.PTypes.pop()
+                        if(index_type != Tipo.INT):
+                            self.p_error(get_error_message(Error.EXPRESSION_INSIDE_SQUARE_BRACKETS_MUST_BE_INT))
+                        var_dir = (var_dir, index_dir, var_symbol[Var.DIM1])
+                    else:
+                        self.p_error(get_error_message(Error.INTERNAL_STACKS))
+                elif p[2] == Kind.MATRIX:
+                    if len(self.PTypes) > 1 and len(self.PilaO)>1:
+                        index_dir_2 = self.PilaO.pop()
+                        index_type_2 = self.PTypes.pop()
+                        index_dir_1 = self.PilaO.pop()
+                        index_type_1 = self.PTypes.pop()
+                        if index_type_1 != Tipo.INT or index_type_2 != Tipo.INT:
+                            self.p_error(get_error_message(Error.EXPRESSION_INSIDE_SQUARE_BRACKETS_MUST_BE_INT))
+                        var_dir = (var_dir, index_dir_1, var_symbol[Var.DIM1], index_dir_2, var_symbol[Var.DIM2])
+                    else:
+                        self.p_error(get_error_message(Error.INTERNAL_STACKS))
                 if(var_type == exp_type):
                     # same type! create quad
-                    self.Quad.append((QOp.EQUAL, self.PilaO.pop(), -1,var_dir))
+                    self.Quad.append((QOp.EQUAL, dir_vir_of_exp, -1,var_dir))
                 elif(var_type == Tipo.INT and exp_type == Tipo.FLOAT):
                     # TODO Ask about casts
-                    self.Quad.append((QOp.EQUAL, self.PilaO.pop(), -1,var_dir))
+                    self.Quad.append((QOp.EQUAL, dir_vir_of_exp, -1,var_dir))
                 elif(var_type == Tipo.FLOAT and exp_type == Tipo.INT):
                     # Ask about casts
-                    self.Quad.append((QOp.EQUAL, self.PilaO.pop(), -1,var_dir))
+                    self.Quad.append((QOp.EQUAL, dir_vir_of_exp, -1,var_dir))
                 else:
                     self.p_error(get_error_message(Error.TYPE_MISMATCH, type_mism={
                         "operator" : "=",
@@ -716,14 +736,14 @@ class MyParser:
 
     def p_asignacionSA(self, p):
         '''
-        asignacionSA : LSQBRACKET expresion RSQBRACKET asignacionSM
+        asignacionSA : lbracketArray expresion rbracketArray asignacionSM
         | empty
         '''
         p[0] = Kind.SINGLE if len(p) < 3 else p[4]
 
     def p_asignacionSM(self, p):
         '''
-        asignacionSM : LSQBRACKET expresion RSQBRACKET 
+        asignacionSM : lbracketArray expresion rbracketArray 
         | empty
         '''
         p[0] = Kind.MATRIX if len(p) > 2 else Kind.ARRAY
@@ -995,26 +1015,42 @@ class MyParser:
 
     def p_print(self, p):
         '''
-        print : PRINT expresion printP 
+        print : PRINT printN
         '''
         c = 0
-        exp_num = 1 + p[3]
+        exp_num = p[2][0]
         exp = []
         while c<exp_num:
             exp.append((self.PilaO.pop(), self.PTypes.pop()))
             c+=1
         c=0
         while c<exp_num:
-            self.Quad.append((QOp.PRINT,) +(exp.pop()) + (c == (exp_num-1),))
+            self.Quad.append((QOp.PRINT,) +(exp.pop()) + (c == (exp_num-1) and p[2][1],))
             c+=1
+        if p[2] == (0, True):
+            self.Quad.append((QOp.PRINT,-1,-1,True))
         p[0] = 'PRINT'
+    
+    def p_printN(self,p):
+        '''
+        printN : expresion printP
+        | ENDL
+        '''
+        print(p[1])
+        p[0] = (0, True) if p[1] == "ENDL" else (1 + p[2][0], p[2][1])
 
     def p_printP(self, p):
         '''
         printP : expresion printP
-        | empty 
+        | ENDL
+        | empty
         '''
-        p[0] = 0 if p[1] == "empty" else p[2] + 1
+        if p[1] == "empty":
+            p[0] = (0, False)
+        elif p[1] == "ENDL":
+            p[0] = (0, True)
+        else:
+            p[0] = (1 + p[2][0], p[2][1])
 
     def p_llamar(self, p):
         '''
@@ -1253,13 +1289,28 @@ class MyParser:
     def p_factor(self, p):
         '''
         factor : cteE
-        | var
+        | var 
         | getEstado
-        | LPAREN expresion RPAREN
+        | lparenExp expresion rparenExp
         '''
         if self.POper and (self.POper[-1] == '*' or self.POper[-1] == '/'):
+            print("a")
+            print(self.PilaO)
+            print(self.POper)
             self.handle_expresion_type()
         p[0] = ''
+
+    def p_lparenExp (self, p):
+        '''
+        lparenExp : LPAREN
+        '''
+        self.POper.append("(")
+
+    def p_rparenExp (self, p):
+        '''
+        rparenExp : RPAREN
+        '''
+        self.POper.pop()
 
     def p_cteE(self, p):
         '''
@@ -1283,11 +1334,12 @@ class MyParser:
         var : ID varP
         | idllamar llamarRest
         '''
+        print("p_var!")
         # 1 si el id no existe error
         symbol = self.curr_symbol_table.get_symbol(p[1])
         if (symbol is None):
             self.p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, p[1]))
-        if symbol[Var.TIPO] == Tipo.VOID:
+        elif symbol[Var.TIPO] == Tipo.VOID:
             self.p_error(get_error_message(Error.VOID_IN_EXPRESION, var = p[1]))
         elif symbol[Var.KIND] == Kind.FUNCTION:
             # temporal to PilaO
@@ -1311,6 +1363,7 @@ class MyParser:
                         self.p_error(get_error_message(Error.EXPRESSION_INSIDE_SQUARE_BRACKETS_MUST_BE_INT))
                     dir_vir_array_start= symbol[Var.DIR_VIR]
                     dir_vir_array_indexed = (dir_vir_array_start, index_dir_vir, symbol[Var.DIM1])
+                    print(dir_vir_array_indexed)
                     self.PilaO.append(dir_vir_array_indexed)
                 else:
                     self.p_error(get_error_message(Error.INTERNAL_STACKS))
@@ -1362,13 +1415,25 @@ class MyParser:
 
     def p_varPArray(self, p):
         '''
-        varPArray : LSQBRACKET expresion RSQBRACKET varPArrayP
+        varPArray : lbracketArray expresion rbracketArray varPArrayP
         '''
         p[0] = p[4]
+    
+    def p_lbracketArray(self,p):
+        '''
+        lbracketArray : LSQBRACKET
+        '''
+        self.POper.append("[")
+
+    def p_rbracketArray(self,p):
+        '''
+        rbracketArray : RSQBRACKET
+        '''
+        self.POper.pop()
 
     def p_varPArrayP(self, p):
         '''
-        varPArrayP : LSQBRACKET expresion RSQBRACKET 
+        varPArrayP : lbracketArray expresion rbracketArray 
         | empty
         '''
         p[0] = Kind.MATRIX if len(p) > 3 else Kind.ARRAY
@@ -1401,7 +1466,7 @@ class MyParser:
             result = self.parser.parse(text, lexer=self.lexer.lexer)
             for i,quad in enumerate(self.Quad):
                 print(str(i) + ". " + str(quad)) 
-            self.memoria.print()
+            # self.memoria.print()
             return result + self.execute()
         except Exception as e:
             return e

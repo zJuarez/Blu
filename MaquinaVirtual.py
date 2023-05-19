@@ -16,35 +16,42 @@ class MaquinaVirtual:
         self.cmemory = cmemory
         self.args = []
         self.logs = ""
+        self.first_local = 10000
+        self.first_const = 28000
     
+    # get the actual dir_vir when it's a tuple
+    def get_dir_vir_array(self, dir_vir):
+        my_dir_vir = 0
+        # is an array(3) or matrix(5)
+        if len(dir_vir) == 3:
+            index = self.read(dir_vir[1])
+            if index < 0 or index >= dir_vir[2]:
+                raise Exception(get_error_message(Error.OUT_OF_BOUNDS))
+            my_dir_vir = dir_vir[0]+index
+        elif len(dir_vir) == 5:
+            index_1 = self.read(dir_vir[1])
+            index_2 = self.read(dir_vir[3])
+            if index_1 < 0 or index_1 >= dir_vir[2] or index_2 < 0 or index_2>= dir_vir[4]:
+                raise Exception(get_error_message(Error.OUT_OF_BOUNDS))
+            my_dir_vir = dir_vir[0]+index_1*dir_vir[4] + index_2
+        return my_dir_vir
+
     def read(self, dir_vir):
-        first_local = 10000
-        first_const = 28000
         my_dir_vir = 0
         if isinstance(dir_vir, int):
             my_dir_vir = dir_vir
         else:
-            # is an array(3) or matrix(5)
-            if len(dir_vir) == 3:
-                index = self.read(dir_vir[1])
-                if index < 0 or index >= dir_vir[2]:
-                    raise Exception(get_error_message(Error.OUT_OF_BOUNDS))
-                my_dir_vir = dir_vir[0]+index
-            elif len(dir_vir) == 5:
-                index_1 = self.read(dir_vir[1])
-                index_2 = self.read(dir_vir[3])
-                if index_1 < 0 or index_1 >= dir_vir[2] or index_2 < 0 or index_2>= dir_vir[4]:
-                    raise Exception(get_error_message(Error.OUT_OF_BOUNDS))
-                my_dir_vir = dir_vir[0]+index_1*dir_vir[4] + index_2
+            # it's array or matrix
+            my_dir_vir = self.get_dir_vir_array(dir_vir)
                 
-        if my_dir_vir < first_local:
+        if my_dir_vir < self.first_local:
             if my_dir_vir not in self.gmemory:
                 raise Exception(f"Var with {my_dir_vir} was read and is not in gmemory ")
             ret = self.gmemory[my_dir_vir]
             if ret is None:
                 raise Exception(f"Var with {my_dir_vir} was referenced before assignment ")
             return ret
-        elif my_dir_vir < first_const:
+        elif my_dir_vir < self.first_const:
             if my_dir_vir not in self.lmemory:
                 raise Exception(f"Var with {my_dir_vir} was read and is not in lmemory ")
             ret = self.lmemory[my_dir_vir]
@@ -60,12 +67,16 @@ class MaquinaVirtual:
             return ret
     
     def write(self, dir_vir, val = None):
-        first_local = 10000
-        first_const = 28000
-        if dir_vir < first_local:
-           self.gmemory[dir_vir] = val
-        elif dir_vir < first_const:
-            self.lmemory[dir_vir] = val
+        my_dir_vir = 0
+        if isinstance(dir_vir, int):
+            my_dir_vir = dir_vir
+        else:
+            # it's array or matrix
+            my_dir_vir = self.get_dir_vir_array(dir_vir)
+        if my_dir_vir < self.first_local:
+           self.gmemory[my_dir_vir] = val
+        elif my_dir_vir < self.first_const:
+            self.lmemory[my_dir_vir] = val
         
     def execute(self):
         # get the start time
@@ -162,7 +173,8 @@ class MaquinaVirtual:
             elif op == QOp.ORIENTATION:
                 self.write(8, self.read(q[1]))
             elif op == QOp.PRINT:
-                self.logs+=(str(self.read(q[1])))
+                if(q[1] != -1):
+                    self.logs+=(str(self.read(q[1])))
                 if q[3] :
                     self.logs+= '\n'
                 else :

@@ -1,6 +1,8 @@
 from State import Tipo, initialStateSymbols
 from enum import Enum
 
+first_local = 10000
+first_const = 28000
 class Section(Enum):
     GLOBAL = 1,
     LOCAL = 2,
