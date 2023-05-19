@@ -1,10 +1,41 @@
 from tkinter import Tk
+import tkinter
 from State import QOp, Var, initialStateSymbols, get_error_message, Error
 import math
 import time
 
+class Memoria:
+    def __init__(self, parent = None, fun_id = "_main"):
+        self.parent = parent
+        self.symbols = {}
+        self.args = []
+        self.fun_id = fun_id
+
+    def get(self, dir_vir):
+        return None if dir_vir not in self.symbols else self.symbols[dir_vir]
+    
+    def set(self, dir_vir, value):
+        self.symbols[dir_vir] = value
+
+    def add_arg(self, arg):
+        self.args.append(arg)
+
+    def get_args(self):
+        return self.args
+    
+    def set_args(self, val):
+        self.args = val
+    
+    def get_parent(self):
+        return self.parent
+    
+    def print(self):
+       print(self.fun_id)
+       print(self.symbols)
+       print(self.args)
+
 class MaquinaVirtual:
-    def __init__(self, quads, func_table, cmemory, w, h, canvas):
+    def __init__(self, quads, func_table, cmemory, w, h, canvas = None):
         self.quads = quads
         self.func_table = func_table
         self.gmemory = {}
@@ -15,13 +46,17 @@ class MaquinaVirtual:
         for key, value in state_sym.items():
             self.gmemory[value[Var.DIR_VIR]] = value[Var.VAL]
             self.dir[key] = value[Var.DIR_VIR]
-        self.lmemory = {}
+        self.lmemory = Memoria()
         self.cmemory = cmemory
         self.args = []
+        self.PIp = []
         self.logs = ""
         self.first_local = 10000
         self.first_const = 28000
-        self.canvas = canvas
+        if canvas is None:
+            self.canvas = tkinter.Canvas(None, width=w, height=h, bd=0, bg="white")
+        else:
+            self.canvas = canvas
     
     def clear_canvas(self):
         self.canvas.delete("all")
@@ -41,50 +76,64 @@ class MaquinaVirtual:
 
     # get the actual dir_vir when it's a tuple
     def get_dir_vir_array(self, dir_vir):
-        my_dir_vir = 0
+        my_dir_vir = []
         # is an array(3) or matrix(5)
         if len(dir_vir) == 3:
             index = self.read(dir_vir[1])
             if index < 0 or index >= dir_vir[2]:
                 raise Exception(get_error_message(Error.OUT_OF_BOUNDS))
-            my_dir_vir = dir_vir[0]+index
+            my_dir_vir = [dir_vir[0]+index]
         elif len(dir_vir) == 5:
             index_1 = self.read(dir_vir[1])
             index_2 = self.read(dir_vir[3])
             if index_1 < 0 or index_1 >= dir_vir[2] or index_2 < 0 or index_2>= dir_vir[4]:
                 raise Exception(get_error_message(Error.OUT_OF_BOUNDS))
-            my_dir_vir = dir_vir[0]+index_1*dir_vir[4] + index_2
+            my_dir_vir = [dir_vir[0]+index_1*dir_vir[4] + index_2]
+        elif len(dir_vir) == 2:
+            # wanting an array of start_dir till size
+            start_dir = dir_vir[0]
+            size = dir_vir[1]
+            end_dir = start_dir + size
+            curr_dir = start_dir
+            while curr_dir<end_dir:
+                my_dir_vir.append(curr_dir)
+                curr_dir+=1
         return my_dir_vir
 
     def read(self, dir_vir):
-        my_dir_vir = 0
+        my_dir_virs = []
+        my_values_ret = []
         if isinstance(dir_vir, int):
-            my_dir_vir = dir_vir
+            my_dir_virs = [dir_vir]
         else:
             # it's array or matrix
-            my_dir_vir = self.get_dir_vir_array(dir_vir)
-                
-        if my_dir_vir < self.first_local:
-            if my_dir_vir not in self.gmemory:
-                raise Exception(f"Var with {my_dir_vir} was read and is not in gmemory ")
-            ret = self.gmemory[my_dir_vir]
-            if ret is None:
-                raise Exception(f"Var with {my_dir_vir} was referenced before assignment ")
-            return ret
-        elif my_dir_vir < self.first_const:
-            if my_dir_vir not in self.lmemory:
-                raise Exception(f"Var with {my_dir_vir} was read and is not in lmemory ")
-            ret = self.lmemory[my_dir_vir]
-            if ret is None:
-                raise Exception(f"Var with {my_dir_vir} was referenced before assignment  ")
-            return ret
+            my_dir_virs = self.get_dir_vir_array(dir_vir)
+        for my_dir_vir in my_dir_virs:
+            ret = 0
+            if my_dir_vir < self.first_local:
+                if my_dir_vir not in self.gmemory:
+                    raise Exception(f"Var with {my_dir_vir} was read and is not in gmemory ")
+                ret = self.gmemory[my_dir_vir]
+                if ret is None:
+                    raise Exception(f"Var with {my_dir_vir} was referenced before assignment ")
+            elif my_dir_vir < self.first_const:
+                if self.lmemory.get(my_dir_vir) is None:
+                    raise Exception(f"Var with {my_dir_vir} was read and is not in lmemory ")
+                ret = self.lmemory.get(my_dir_vir)
+                if ret is None:
+                    raise Exception(f"Var with {my_dir_vir} was referenced before assignment  ")
+            else:
+                if my_dir_vir not in self.cmemory:
+                    raise Exception(f"Var with {my_dir_vir} was read and is not in cmemory ")
+                ret = self.cmemory[my_dir_vir]
+                if ret is None:
+                    raise Exception(f"Var with {my_dir_vir} was referenced before assignment ")
+            my_values_ret.append(ret)
+
+        if len(my_values_ret) == 1:
+            return my_values_ret[0]
         else:
-            if my_dir_vir not in self.cmemory:
-                raise Exception(f"Var with {my_dir_vir} was read and is not in cmemory ")
-            ret = self.cmemory[my_dir_vir]
-            if ret is None:
-                raise Exception(f"Var with {my_dir_vir} was referenced before assignment ")
-            return ret
+            return my_values_ret
     
     def write(self, dir_vir, val = None):
         my_dir_vir = 0
@@ -93,10 +142,11 @@ class MaquinaVirtual:
         else:
             # it's array or matrix
             my_dir_vir = self.get_dir_vir_array(dir_vir)
+
         if my_dir_vir < self.first_local:
            self.gmemory[my_dir_vir] = val
         elif my_dir_vir < self.first_const:
-            self.lmemory[my_dir_vir] = val
+            self.lmemory.set(my_dir_vir,val)
         
     def execute(self):
         # get the start time
@@ -104,10 +154,12 @@ class MaquinaVirtual:
         stack = []
         pc = 0  # program counter
         self.clear_canvas()
+        for idx, v in enumerate(self.quads):
+            print(str(idx) + "." + str(v))
         while pc < len(self.quads):
             q = self.quads[pc]
             op = q[0]
-            #print(pc)
+            print(pc)
            # switch statement using QOp enumeration
             if op == QOp.EQUAL:
                 self.write(q[3], None if q[1] is None else self.read(q[1]))
@@ -167,6 +219,25 @@ class MaquinaVirtual:
             elif op == QOp.CIRCLE:
                 # TODO DRAW xd
                 radius = self.read(q[1])
+            elif op == QOp.POLYGON:
+                # using id
+                values = q[1]
+                if isinstance(q[1], tuple):
+                    values = self.read(q[1])
+                
+                if len(values)%2 == 1:
+                    values.pop() # must be pair
+                c = 0
+                size = len(values)
+                points = []
+                while c<size:
+                    points.append((values[c], values[c+1]))
+                    c+=2
+                if q[2] == "empty":
+                    self.canvas.create_polygon(points)
+                else:
+                    self.canvas.create_polygon(points, fill = self.read(q[2]))
+
             elif op == QOp.GO:
                 # current position
                 x = self.read(0)
@@ -176,20 +247,19 @@ class MaquinaVirtual:
                 # distance to move forward
                 n = self.read(q[1])
                 # calculate new position
-                angle = math.radians(90 - direction)  # convert to radians and adjust for starting direction
+                angle = math.radians(270 + direction)  # convert to radians and adjust for starting direction
                 dx = n * math.cos(angle)
                 dy = n * math.sin(angle)
                 if(self.read(self.dir["IS_PENDOWN"])):
                     line = self.canvas.create_line(x, y, x+dx, y+dy, fill=self.read(self.dir["GET_COLOR"]), width = self.read(self.dir["GET_WIDTH"]))
-                    print("drwa!")
                 self.write(0, x + dx)
                 self.write(1, y + dy)
             elif op == QOp.RIGHT:
-                self.write(self.dir["GET_ORIENTATION"], self.read(self.dir["GET_ORIENTATION"]) + self.read(q[1]))
+                self.write(self.dir["GET_ORIENTATION"], (self.read(self.dir["GET_ORIENTATION"])%360 + self.read(q[1])%360)%360)
             elif op == QOp.LEFT:
-                self.write(self.dir["GET_ORIENTATION"], self.read(self.dir["GET_ORIENTATION"]) - self.read(q[1]))
+                self.write(self.dir["GET_ORIENTATION"], (self.read(self.dir["GET_ORIENTATION"])%360 - self.read(q[1])%360)%360)
             elif op == QOp.ORIENTATION:
-                self.write(self.dir["GET_ORIENTATION"], self.read(q[1]))
+                self.write(self.dir["GET_ORIENTATION"], self.read(q[1])%360)
             elif op == QOp.PRINT:
                 if(q[1] != -1):
                     self.logs+=(str(self.read(q[1])))
@@ -200,25 +270,32 @@ class MaquinaVirtual:
             elif op == QOp.ERA:
                 result = None
             elif op == QOp.GOSUB:
-                stack.append((pc, self.lmemory, q[1]))
-                self.lmemory = {}
+                stack.append((pc, q[1]))
+                args = self.lmemory.get_args()
+                # done using this list
+                self.lmemory.set_args([])
+                args_values = []
+                # get args values before switching lmemory
+                for arg_dir in args:
+                    args_values.append(self.read(arg_dir))
+                # switch lmemory REMEMBER current lmemory in parent of new one
+                self.lmemory = Memoria(parent=self.lmemory, fun_id = q[1])
                 fun_symbol = self.func_table.get_symbol(q[1])
-                # fill l memory with args
+                # fill new lmemory with args values
                 for idx, arg in enumerate(fun_symbol[Var.ARGS]):
-                    self.write(arg[Var.DIR_VIR], self.read(self.args[-1][idx]))
+                    self.write(arg[Var.DIR_VIR], args_values[idx])
+                # go to pc of fun
                 pc = fun_symbol[Var.QUAD]
+                self.lmemory.print()
                 continue
             elif op == QOp.PARAM:
-                if q[2] == 'param1':
-                    self.args.append([q[1]])
-                else:
-                    self.args[-1].append(q[1])
+                self.lmemory.add_arg(q[1])
             elif op == QOp.ENDFUNC:
                 top = stack.pop()
                 pc = top[0]
-                self.lmemory = top[1]
+                self.lmemory = self.lmemory.get_parent()
             elif op == QOp.RETURN:
-                fun_id = stack[-1][2]
+                fun_id = stack[-1][1]
                 dir_vir_fun = self.func_table.get_symbol(fun_id)[Var.DIR_VIR]
                 self.write(dir_vir_fun, self.read(q[1]))
             elif op == QOp.END:

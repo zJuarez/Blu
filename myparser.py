@@ -986,6 +986,7 @@ class MyParser:
         '''
         estado : POS expresion expresion
         | BG expresion
+        | POLYGON polygonOp
         | COLOR expresion
         | PENDOWN
         | PENUP
@@ -1006,6 +1007,8 @@ class MyParser:
                 self.Quad.append((QOp.POS, self.PilaO.pop(), -1, self.PilaO.pop()))
             else:
                 self.p_error(get_error_message(Error.INTERNAL_STACKS))
+        elif p[1] == 'POLYGON':
+            x = 1
         elif p[1] == 'PENDOWN' or p[1] == 'PENUP':
             self.Quad.append((get_quad_operation_from_state(p[1]),))
         elif p[1] != 'PRINT':
@@ -1019,6 +1022,53 @@ class MyParser:
             else:
                 self.p_error(get_error_message(Error.INTERNAL_STACKS))
         p[0] = ''
+    
+    def p_polygonOp(self,p):
+        '''
+        polygonOp : polygon1p polygon2p
+        '''
+        self.Quad.append((QOp.POLYGON, p[1], p[2]))
+
+    def p_polygon1p(self,p):
+        '''
+        polygon1p : ID polygon1pSB
+        | acte
+        '''
+        if len(p)>2:
+            id = p[1]
+            info = self.curr_symbol_table.get_symbol(id)
+            if info == None:
+                self.p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, id))
+            if info[Var.KIND] != p[2]:
+                self.p_error(get_error_message(Error.ID_IS_NOT_ITERABLE, id))
+            # TODO matrix[i] ?
+            # var getting all array
+            p[0] = (info[Var.DIR_VIR], info[Var.DIM1])
+        else:
+            acte_info = self.get_acte_info(p[1])
+            if acte_info[Var.TIPO] != Tipo.INT and acte_info[Var.TIPO] != Tipo.FLOAT:
+                 self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_NUMERIC, var="Polygon points "))
+            p[0] = acte_info[Var.VAL] # should be array of nums
+
+
+    def p_polygon1pSB(self,p):
+        '''
+        polygon1pSB :  empty
+        '''
+        p[0] =  Kind.ARRAY
+
+    def p_polygon2p(self,p):
+        '''
+        polygon2p : expresion
+        | empty
+        '''
+        if "empty" == p[1]:
+            p[0] = "empty"
+        else:
+            tipo_exp = self.PTypes.pop()
+            if tipo_exp != Tipo.STRING:
+                self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_STRING, var="Polygon color "))
+            p[0] = self.PilaO.pop()
 
     def p_print(self, p):
         '''
@@ -1344,8 +1394,8 @@ class MyParser:
         elif symbol[Var.TIPO] == Tipo.VOID:
             self.p_error(get_error_message(Error.VOID_IN_EXPRESION, var = p[1]))
         elif symbol[Var.KIND] == Kind.FUNCTION:
-            # temporal to PilaO
-            self.PilaO.append(self.memoria.add(Section.TEMP, symbol[Var.TIPO]))
+            # global to PilaO
+            self.PilaO.append(symbol[Var.DIR_VIR])
         elif symbol[Var.KIND] == Kind.SINGLE:
             # lo usaste como array [] error
             if p[2] != Kind.SINGLE:

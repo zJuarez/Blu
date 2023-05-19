@@ -17,4 +17,4 @@ FUNCTION VOID square(INT x, BOOL y, STRING z){
 }
 
 square(2 + 2*4, TRUE, "hello")
-sum(1,2)
+PRINT sum(1,2)

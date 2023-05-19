@@ -117,6 +117,7 @@ class QOp(Enum):
     END = 32
     EQUALP = 33
     SET_ARRAY = 34
+    POLYGON = 35
 
 operator_to_quadop = {
     "=" : QOp.EQUAL,

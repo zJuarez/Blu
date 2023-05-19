@@ -1,10 +1,11 @@
+import sys
 import tkinter as tk
 from PIL import Image, ImageTk
 from myparser import MyParser
 from console import console
 
 class BluUI:
-    def __init__(self, root):
+    def __init__(self, root, data):
         self.root = root
         self.root.title("Blu UI")
         self.create_icons()
@@ -13,6 +14,7 @@ class BluUI:
         self.width = dim[0]
         self.height = dim[1]
         self.my_parser = MyParser(dim[0], dim[1], self.canvas)
+        self.data = data
 
     # Define a function to minimize the application
     def minimize_app(self):
@@ -88,6 +90,7 @@ class BluUI:
         compile_button.bind("<Button-1>", lambda event: self.compile_code(canvas_width, canvas_height))
         compile_button.bind("<Enter>", lambda event: compile_button.config(cursor="hand2"))
         compile_button.bind("<Leave>", lambda event: compile_button.config(cursor=""))
+        
 
         # Cuadro de texto de código
         self.code_text_frame = tk.Frame(self.text_frame, bd=0, padx=10, pady=10, height = height*6/13, bg="#D0CECE")
@@ -98,12 +101,7 @@ class BluUI:
         self.code_text.pack()
         self.code_text.configure(font = ("Consolas", 16))
         self.code_text_frame.pack_propagate(False)  # Disable automatic resizing of the
-        self.code_text.insert("1.0", '''PENDOWN
-  FOR (4) {
-    GO 100
-    RIGHT 90
-  }
-  PENUP"''')
+        self.code_text.insert("1.0", data)
 
         self.margin_frame_v = tk.Frame(self.text_frame, height = height*0.6/13, bg= "#A9CBD9")
         self.margin_frame_v.pack(fill=tk.X, expand=True)
@@ -166,11 +164,18 @@ class BluUI:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    blu_editor = BluUI(root)
+    files = sys.argv[1:] if len(sys.argv) > 1 else ["square.blu"]
+    data = ''' PRINT "HELLO WORLD"'''
+    for fileName in files:
+        with open("examples/" + fileName) as file:
+            data = file.read()
+    blu_editor = BluUI(root, data)
     # Make the window take up the full screen
     root.state("zoomed")
     w = blu_editor.get_dims()[0]
     h = blu_editor.get_dims()[1]
     root.config(padx=w/23, pady=h/13, bg="")
     root.configure(bg="#A9CBD9")
+
+
     root.mainloop()

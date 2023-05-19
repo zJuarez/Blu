@@ -41,6 +41,7 @@ class MyLexer(object):
     'RETURN' : 'RETURN',
     'WHILE' : 'WHILE',
     'ENDL' : 'ENDL',
+    'POLYGON' : 'POLYGON',
     }
 
     # All tokens must be named in advance.
