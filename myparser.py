@@ -8,13 +8,14 @@ from MaquinaVirtual import MaquinaVirtual
 from State import *
 
 class MyParser:
-    def __init__(self, width = 800 , height = 700):
+    def __init__(self, width = 800 , height = 700, canvas = None):
         self.lexer = MyLexer()
         self.lexer.build()
         self.tokens = self.lexer.tokens
         self.parser = yacc(module=self)
         self.width = width
         self.height = height
+        self.canvas = canvas
     
     def change_dimensions(self, w, h):
         self.width = w
@@ -1464,15 +1465,12 @@ class MyParser:
         self.clear_state()
         try: 
             result = self.parser.parse(text, lexer=self.lexer.lexer)
-            for i,quad in enumerate(self.Quad):
-                print(str(i) + ". " + str(quad)) 
-            # self.memoria.print()
-            return result + self.execute()
+            return self.execute()
         except Exception as e:
             return e
     
     def execute(self):
-        mv = MaquinaVirtual(self.Quad, self.func_table, self.memoria.get_const_map(), self.width, self.height)
+        mv = MaquinaVirtual(self.Quad, self.func_table, self.memoria.get_const_map(), self.width, self.height, self.canvas)
         return mv.execute()
 
         

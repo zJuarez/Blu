@@ -1,24 +1,44 @@
+from tkinter import Tk
 from State import QOp, Var, initialStateSymbols, get_error_message, Error
 import math
 import time
 
 class MaquinaVirtual:
-    def __init__(self, quads, func_table, cmemory, w, h):
+    def __init__(self, quads, func_table, cmemory, w, h, canvas):
         self.quads = quads
         self.func_table = func_table
         self.gmemory = {}
         # load in gmemory state functions
         state_sym = initialStateSymbols(w,h)
+        self.dir = {}
         # Iterating over both keys and values
         for key, value in state_sym.items():
             self.gmemory[value[Var.DIR_VIR]] = value[Var.VAL]
+            self.dir[key] = value[Var.DIR_VIR]
         self.lmemory = {}
         self.cmemory = cmemory
         self.args = []
         self.logs = ""
         self.first_local = 10000
         self.first_const = 28000
+        self.canvas = canvas
     
+    def clear_canvas(self):
+        self.canvas.delete("all")
+    
+    def update_arrow(self):
+        self.canvas.configure(bg = self.read(self.dir["GET_BG"]))
+        x, y = self.read(self.dir["GET_POS_X"]) , self.read(self.dir["GET_POS_Y"]) # Center coordinates of the canvas
+        length = 20  # Length of the arrow
+        orientation = self.read(self.dir["GET_ORIENTATION"]) +270 # Angle in degrees (assuming orientation is in degrees)
+
+        # Calculate the end point based on the orientation and length
+        end_x = x - length * math.cos(math.radians(orientation))
+        end_y = y - length * math.sin(math.radians(orientation))
+
+        # Draw the line
+        line = self.canvas.create_line(end_x, end_y, x,y, arrow="last", fill="green", width = 3)
+
     # get the actual dir_vir when it's a tuple
     def get_dir_vir_array(self, dir_vir):
         my_dir_vir = 0
@@ -83,6 +103,7 @@ class MaquinaVirtual:
         st = time.time()
         stack = []
         pc = 0  # program counter
+        self.clear_canvas()
         while pc < len(self.quads):
             q = self.quads[pc]
             op = q[0]
@@ -131,47 +152,44 @@ class MaquinaVirtual:
                     pc = q[2]
                     continue
             elif op == QOp.POS:
-                self.write(0, self.read(q[1])) # GET_POS_X
-                self.write(1, self.read(q[2])) # GET_POS_Y
+                self.write(self.dir["GET_POS_X"], self.read(q[1])) # GET_POS_X
+                self.write(self.dir["GET_POS_Y"], self.read(q[2])) # GET_POS_Y
             elif op == QOp.BG:
-                self.write(3, self.read(q[1]))
+                self.write(self.dir["GET_BG"], self.read(q[1]))
             elif op == QOp.COLOR:
-                self.write(4, self.read(q[1]))
+                self.write(self.dir["GET_COLOR"], self.read(q[1]))
             elif op == QOp.PENDOWN:
-                self.write(5, True)
-                self.write(6, False)
+                self.write(self.dir["IS_PENDOWN"], True)
             elif op == QOp.PENUP:
-                self.write(5, False)
-                self.write(6, True)
+                self.write(self.dir["IS_PENDOWN"], False)
             elif op == QOp.WIDTH:
-                self.write(7, self.read(q[1]))
+                self.write(self.dir["GET_WIDTH"], self.read(q[1]))
             elif op == QOp.CIRCLE:
                 # TODO DRAW xd
                 radius = self.read(q[1])
             elif op == QOp.GO:
-                # TODO draw
                 # current position
                 x = self.read(0)
                 y = self.read(1)
-
                 # direction in degrees, 0 is north, 90 is east
-                direction = self.read(7)
-
+                direction = self.read(self.dir["GET_ORIENTATION"])
                 # distance to move forward
                 n = self.read(q[1])
-
                 # calculate new position
                 angle = math.radians(90 - direction)  # convert to radians and adjust for starting direction
                 dx = n * math.cos(angle)
                 dy = n * math.sin(angle)
+                if(self.read(self.dir["IS_PENDOWN"])):
+                    line = self.canvas.create_line(x, y, x+dx, y+dy, fill=self.read(self.dir["GET_COLOR"]), width = self.read(self.dir["GET_WIDTH"]))
+                    print("drwa!")
                 self.write(0, x + dx)
                 self.write(1, y + dy)
             elif op == QOp.RIGHT:
-                self.write(7, self.read(7) + self.read(q[1]))
+                self.write(self.dir["GET_ORIENTATION"], self.read(self.dir["GET_ORIENTATION"]) + self.read(q[1]))
             elif op == QOp.LEFT:
-                self.write(7, self.read(7) - self.read(q[1]))
+                self.write(self.dir["GET_ORIENTATION"], self.read(self.dir["GET_ORIENTATION"]) - self.read(q[1]))
             elif op == QOp.ORIENTATION:
-                self.write(7, self.read(q[1]))
+                self.write(self.dir["GET_ORIENTATION"], self.read(q[1]))
             elif op == QOp.PRINT:
                 if(q[1] != -1):
                     self.logs+=(str(self.read(q[1])))
@@ -208,5 +226,6 @@ class MaquinaVirtual:
                 et = time.time()
                 elapsed_time = et - st
                 self.logs+=f'\nExecution time: {elapsed_time} seconds'
+                self.update_arrow()
             pc += 1  # move to the next quad
         return self.logs

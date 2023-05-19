@@ -217,8 +217,8 @@ def initialStateSymbols(w = 800,h = 700):
     return {
         'GET_POS_X' : {Var.ID : 'GET_POS_X' , Var.TIPO : Tipo.FLOAT, Var.KIND : Kind.STATE, Var.VAL : w/2, Var.DIR_VIR: 0},
         'GET_POS_Y' : {Var.ID : 'GET_POS_Y' , Var.TIPO : Tipo.FLOAT, Var.KIND : Kind.STATE, Var.VAL : h/2, Var.DIR_VIR: 1},
-        'GET_BG' : {Var.ID : 'GET_BG' , Var.TIPO : Tipo.STRING, Var.KIND : Kind.STATE, Var.VAL : Color.WHITE, Var.DIR_VIR: 2},
-        'GET_COLOR' : {Var.ID : 'GET_COLOR' , Var.TIPO : Tipo.STRING, Var.KIND : Kind.STATE, Var.VAL : Color.BLACK, Var.DIR_VIR: 3},
+        'GET_BG' : {Var.ID : 'GET_BG' , Var.TIPO : Tipo.STRING, Var.KIND : Kind.STATE, Var.VAL : Color.WHITE.value, Var.DIR_VIR: 2},
+        'GET_COLOR' : {Var.ID : 'GET_COLOR' , Var.TIPO : Tipo.STRING, Var.KIND : Kind.STATE, Var.VAL : Color.BLACK.value, Var.DIR_VIR: 3},
         'IS_PENDOWN' : {Var.ID : 'IS_PENDOWN' , Var.TIPO : Tipo.BOOL, Var.KIND : Kind.STATE, Var.VAL : False, Var.DIR_VIR: 4},
         'IS_PENUP' : {Var.ID : 'IS_PENDOWN' , Var.TIPO : Tipo.BOOL, Var.KIND : Kind.STATE, Var.VAL : True, Var.DIR_VIR: 5},
         'GET_WIDTH' : {Var.ID : 'GET_WIDTH' , Var.TIPO : Tipo.FLOAT, Var.KIND : Kind.STATE, Var.VAL : 1, Var.DIR_VIR: 6},
