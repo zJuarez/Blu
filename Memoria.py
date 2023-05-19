@@ -1,4 +1,4 @@
-from State import Tipo, initialStateSymbols
+from State import Tipo
 from enum import Enum
 
 first_local = 10000

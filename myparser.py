@@ -8,18 +8,24 @@ from MaquinaVirtual import MaquinaVirtual
 from State import *
 
 class MyParser:
-    def __init__(self):
+    def __init__(self, width = 800 , height = 700):
         self.lexer = MyLexer()
         self.lexer.build()
         self.tokens = self.lexer.tokens
         self.parser = yacc(module=self)
+        self.width = width
+        self.height = height
+    
+    def change_dimensions(self, w, h):
+        self.width = w
+        self.height = h
 
     def clear_state(self):
         self.errores = 0
         self.curr_symbol_table = SymbolTable()
         self.func_table = SymbolTable()
         # añadir valores inicales del width, color, pos, etc.
-        initialVals = initialStateSymbols()
+        initialVals = initialStateSymbols(self.width, self.height)
         for key,value in initialVals.items():
             self.curr_symbol_table.add_symbol(key, value)
         self.memoria = Memoria()
@@ -1392,7 +1398,7 @@ class MyParser:
         | GET_ORIENTATION
         '''
         # append el id de la expresion a la pila 
-        state = initialStateSymbols()
+        state = initialStateSymbols(self.width, self.height)
         self.PilaO.append(state[p[1]][Var.DIR_VIR])
         # append el tipo
         symbol = self.curr_symbol_table.get_symbol(p[1])
@@ -1466,7 +1472,7 @@ class MyParser:
             return e
     
     def execute(self):
-        mv = MaquinaVirtual(self.Quad, self.func_table, self.memoria.get_const_map())
+        mv = MaquinaVirtual(self.Quad, self.func_table, self.memoria.get_const_map(), self.width, self.height)
         return mv.execute()
 
         

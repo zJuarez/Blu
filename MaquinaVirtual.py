@@ -3,12 +3,12 @@ import math
 import time
 
 class MaquinaVirtual:
-    def __init__(self, quads, func_table, cmemory):
+    def __init__(self, quads, func_table, cmemory, w, h):
         self.quads = quads
         self.func_table = func_table
         self.gmemory = {}
         # load in gmemory state functions
-        state_sym = initialStateSymbols()
+        state_sym = initialStateSymbols(w,h)
         # Iterating over both keys and values
         for key, value in state_sym.items():
             self.gmemory[value[Var.DIR_VIR]] = value[Var.VAL]
@@ -155,7 +155,7 @@ class MaquinaVirtual:
                 y = self.read(1)
 
                 # direction in degrees, 0 is north, 90 is east
-                direction = self.read(8)
+                direction = self.read(7)
 
                 # distance to move forward
                 n = self.read(q[1])
@@ -167,11 +167,11 @@ class MaquinaVirtual:
                 self.write(0, x + dx)
                 self.write(1, y + dy)
             elif op == QOp.RIGHT:
-                self.write(8, self.read(8) + self.read(q[1]))
+                self.write(7, self.read(7) + self.read(q[1]))
             elif op == QOp.LEFT:
-                self.write(8, self.read(8) - self.read(q[1]))
+                self.write(7, self.read(7) - self.read(q[1]))
             elif op == QOp.ORIENTATION:
-                self.write(8, self.read(q[1]))
+                self.write(7, self.read(q[1]))
             elif op == QOp.PRINT:
                 if(q[1] != -1):
                     self.logs+=(str(self.read(q[1])))
@@ -207,6 +207,6 @@ class MaquinaVirtual:
                 # get the end time
                 et = time.time()
                 elapsed_time = et - st
-                self.logs+=f'Execution time: {elapsed_time} seconds'
+                self.logs+=f'\nExecution time: {elapsed_time} seconds'
             pc += 1  # move to the next quad
         return self.logs
