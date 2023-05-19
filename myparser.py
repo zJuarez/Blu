@@ -1036,7 +1036,6 @@ class MyParser:
         printN : expresion printP
         | ENDL
         '''
-        print(p[1])
         p[0] = (0, True) if p[1] == "ENDL" else (1 + p[2][0], p[2][1])
 
     def p_printP(self, p):
@@ -1294,9 +1293,6 @@ class MyParser:
         | lparenExp expresion rparenExp
         '''
         if self.POper and (self.POper[-1] == '*' or self.POper[-1] == '/'):
-            print("a")
-            print(self.PilaO)
-            print(self.POper)
             self.handle_expresion_type()
         p[0] = ''
 
@@ -1334,7 +1330,6 @@ class MyParser:
         var : ID varP
         | idllamar llamarRest
         '''
-        print("p_var!")
         # 1 si el id no existe error
         symbol = self.curr_symbol_table.get_symbol(p[1])
         if (symbol is None):
@@ -1363,7 +1358,6 @@ class MyParser:
                         self.p_error(get_error_message(Error.EXPRESSION_INSIDE_SQUARE_BRACKETS_MUST_BE_INT))
                     dir_vir_array_start= symbol[Var.DIR_VIR]
                     dir_vir_array_indexed = (dir_vir_array_start, index_dir_vir, symbol[Var.DIM1])
-                    print(dir_vir_array_indexed)
                     self.PilaO.append(dir_vir_array_indexed)
                 else:
                     self.p_error(get_error_message(Error.INTERNAL_STACKS))
