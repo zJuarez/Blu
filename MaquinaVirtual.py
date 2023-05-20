@@ -249,7 +249,7 @@ class MaquinaVirtual:
                 if q[1] == "empty":
                     val = random.random()
                 else:
-                    val = random.randint(self.read(q[1][0]), self.read(q[1][1]))
+                    val = random.randint(int(self.read(q[1][0])), int(self.read(q[1][1])))
                 self.write(q[2], val)
             elif op == QOp.GO:
                 # current position

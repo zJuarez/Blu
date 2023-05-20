@@ -9,4 +9,8 @@ STRING chip = "#3F1809"
 
 c(GET_POS_X, GET_POS_Y, r, cookie)
 
-PRINT RANDOM
+FLOAT chip_r = r/12
+FOR(10){
+    FLOAT cx = RANDOM GET_POS_X - r GET_POS_X + r, cy = RANDOM GET_POS_Y -r GET_POS_Y+r
+    c(cx,cy,chip_r, chip)
+}

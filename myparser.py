@@ -821,18 +821,21 @@ class MyParser:
                 l_val = self.curr_state.get_info(Var.ID)
                 r_type = self.PTypes.pop()
                 if l_type != r_type:
-                    op = {
-                            'operator' : "=",
-                            'left' : {
-                                'val' : str(l_val),
-                                'tipo' : str(l_type)
-                            },
-                            'right' : {
-                                'val' : "exp",
-                                'tipo' : str(r_type)
+                    if (l_type == Tipo.INT and r_type == Tipo.FLOAT) or (l_type == Tipo.FLOAT and r_type == Tipo.INT):
+                        x = 1
+                    else:
+                        op = {
+                                'operator' : "=",
+                                'left' : {
+                                    'val' : str(l_val),
+                                    'tipo' : str(l_type)
+                                },
+                                'right' : {
+                                    'val' : "exp",
+                                    'tipo' : str(r_type)
+                                }
                             }
-                        }
-                    self.p_error(get_error_message(Error.TYPE_MISMATCH, type_mism=op))
+                        self.p_error(get_error_message(Error.TYPE_MISMATCH, type_mism=op))
             else:
                 # mistake of stacks
                 self.p_error(get_error_message(Error.INTERNAL_STACKS))
