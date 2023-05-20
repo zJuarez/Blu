@@ -42,6 +42,7 @@ class MyLexer(object):
     'WHILE' : 'WHILE',
     'ENDL' : 'ENDL',
     'POLYGON' : 'POLYGON',
+    'RANDOM' : 'RANDOM',
     }
 
     # All tokens must be named in advance.

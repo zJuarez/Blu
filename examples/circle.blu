@@ -1,0 +1,2 @@
+STRING cookie = "blue"
+CIRCLE 200 200 400 400 cookie

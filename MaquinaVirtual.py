@@ -3,7 +3,7 @@ import tkinter
 from State import QOp, Var, initialStateSymbols, get_error_message, Error
 import math
 import time
-
+import random
 class Memoria:
     def __init__(self, parent = None, fun_id = "_main"):
         self.parent = parent
@@ -218,13 +218,20 @@ class MaquinaVirtual:
                 self.write(self.dir["GET_WIDTH"], self.read(q[1]))
             elif op == QOp.CIRCLE:
                 # TODO DRAW xd
-                radius = self.read(q[1])
+                y1 = self.read(q[4])
+                x1 = self.read(q[3])
+                y0 = self.read(q[2])
+                x0 = self.read(q[1])
+                fill = q[5]
+                if fill == "empty":
+                    self.canvas.create_oval(x0,y0,x1,y1)
+                else:
+                    self.canvas.create_oval(x0,y0,x1,y1, fill=self.read(q[5]))
             elif op == QOp.POLYGON:
                 # using id
                 values = q[1]
                 if isinstance(q[1], tuple):
                     values = self.read(q[1])
-                
                 if len(values)%2 == 1:
                     values.pop() # must be pair
                 c = 0
@@ -237,7 +244,13 @@ class MaquinaVirtual:
                     self.canvas.create_polygon(points)
                 else:
                     self.canvas.create_polygon(points, fill = self.read(q[2]))
-
+            elif op == QOp.RANDOM:
+                val = 0
+                if q[1] == "empty":
+                    val = random.random()
+                else:
+                    val = random.randint(self.read(q[1][0]), self.read(q[1][1]))
+                self.write(q[2], val)
             elif op == QOp.GO:
                 # current position
                 x = self.read(0)

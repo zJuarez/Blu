@@ -118,6 +118,7 @@ class QOp(Enum):
     EQUALP = 33
     SET_ARRAY = 34
     POLYGON = 35
+    RANDOM = 36
 
 operator_to_quadop = {
     "=" : QOp.EQUAL,

@@ -1,0 +1,12 @@
+FUNCTION VOID c(FLOAT cx, FLOAT cy, FLOAT r, STRING color){
+  CIRCLE cx - r cy - r cx + r cy + r color
+}
+
+FLOAT r = GET_POS_Y/2
+
+STRING cookie = "#D6AC5C"
+STRING chip = "#3F1809"
+
+c(GET_POS_X, GET_POS_Y, r, cookie)
+
+PRINT RANDOM

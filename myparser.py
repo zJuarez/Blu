@@ -982,9 +982,24 @@ class MyParser:
         '''
         p[0] = p[2]
 
+    def p_twoExpNum(self,p):
+        '''
+        twoExpNum : expresion expresion
+        '''
+        if len(self.PilaO) > 1 and len(self.PTypes) > 1:
+            first_type = self.PTypes.pop()
+            second_type = self.PTypes.pop()
+            if (first_type != Tipo.INT and first_type != Tipo.FLOAT) or (second_type != Tipo.INT and second_type != Tipo.FLOAT):
+                    self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_NUMERIC, ""))
+            p[0] = [self.PilaO[-2], self.PilaO[-1]]
+            self.PilaO.pop()
+            self.PilaO.pop()
+        else:
+            self.p_error(get_error_message(Error.INTERNAL_STACKS))
+
     def p_estado(self, p):
         '''
-        estado : POS expresion expresion
+        estado : POS twoExpNum
         | BG expresion
         | POLYGON polygonOp
         | COLOR expresion
@@ -999,14 +1014,7 @@ class MyParser:
         | print
         '''
         if p[1] == 'POS':
-            if len(self.PilaO) > 1:
-                first_type = self.PTypes.pop()
-                second_type = self.PTypes.pop()
-                if (first_type != Tipo.INT and first_type != Tipo.FLOAT) or (second_type != Tipo.INT and second_type != Tipo.FLOAT):
-                     self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_NUMERIC, p[1]))
-                self.Quad.append((QOp.POS, self.PilaO.pop(), -1, self.PilaO.pop()))
-            else:
-                self.p_error(get_error_message(Error.INTERNAL_STACKS))
+            self.Quad.append((QOp.POS, p[2][0], -1, p[2][1]))
         elif p[1] == 'POLYGON':
             x = 1
         elif p[1] == 'PENDOWN' or p[1] == 'PENUP':
@@ -1025,7 +1033,7 @@ class MyParser:
     
     def p_polygonOp(self,p):
         '''
-        polygonOp : polygon1p polygon2p
+        polygonOp : polygon1p fillOp
         '''
         self.Quad.append((QOp.POLYGON, p[1], p[2]))
 
@@ -1057,9 +1065,9 @@ class MyParser:
         '''
         p[0] =  Kind.ARRAY
 
-    def p_polygon2p(self,p):
+    def p_fillOp(self,p):
         '''
-        polygon2p : expresion
+        fillOp : expresion
         | empty
         '''
         if "empty" == p[1]:
@@ -1067,7 +1075,7 @@ class MyParser:
         else:
             tipo_exp = self.PTypes.pop()
             if tipo_exp != Tipo.STRING:
-                self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_STRING, var="Polygon color "))
+                self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_STRING, var="Fill Color "))
             p[0] = self.PilaO.pop()
 
     def p_print(self, p):
@@ -1202,8 +1210,20 @@ class MyParser:
         '''
         drawFunc : CURVE_C expresion expresion expresion expresion
         | CURVE_Q expresion expresion expresion expresion expresion expresion
-        | CIRCLE expresion
+        | CIRCLE expresion expresion expresion expresion fillOp
         '''
+        if p[1] == "CIRCLE":
+            if len(self.PilaO) < 4 and len(self.PTypes) < 4:
+                self.p_error(get_error_message(Error.INTERNAL_STACKS))
+            types = [self.PTypes.pop(), self.PTypes.pop(), self.PTypes.pop(), self.PTypes.pop()]
+            for ty in types:
+                if ty != Tipo.INT and ty != Tipo.FLOAT:
+                    self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_NUMERIC, "Circle" ))
+            y1 = self.PilaO.pop()
+            x1 = self.PilaO.pop()
+            y0 = self.PilaO.pop()
+            x0 = self.PilaO.pop()
+            self.Quad.append((QOp.CIRCLE, x0,y0,x1,y1, p[6]))
         p[0] = ''
 
     def p_tipo(self, p):
@@ -1447,15 +1467,28 @@ class MyParser:
         | IS_PENUP
         | GET_WIDTH
         | GET_ORIENTATION
+        | RANDOM randomOp
         '''
-        # append el id de la expresion a la pila 
-        state = initialStateSymbols(self.width, self.height)
-        self.PilaO.append(state[p[1]][Var.DIR_VIR])
-        # append el tipo
-        symbol = self.curr_symbol_table.get_symbol(p[1])
-        self.PTypes.append(symbol[Var.TIPO])
+        if p[1] == "RANDOM":
+            random_dir_vir = self.memoria.add(Section.TEMP, Tipo.FLOAT)
+            self.Quad.append((QOp.RANDOM, p[2], random_dir_vir))
+            self.PilaO.append(random_dir_vir)
+            self.PTypes.append(Tipo.FLOAT)
+        else:
+            # append el id de la expresion a la pila 
+            state = initialStateSymbols(self.width, self.height)
+            self.PilaO.append(state[p[1]][Var.DIR_VIR])
+            # append el tipo
+            symbol = self.curr_symbol_table.get_symbol(p[1])
+            self.PTypes.append(symbol[Var.TIPO])
         p[0] = p[1]
 
+    def p_randomOp(self,p):
+        '''
+        randomOp : twoExpNum
+        | empty
+        '''
+        p[0] = p[1]
 
     def p_varP(self, p):
         '''
@@ -1515,6 +1548,7 @@ class MyParser:
         self.clear_state()
         try: 
             result = self.parser.parse(text, lexer=self.lexer.lexer)
+            self.memoria.print()
             return self.execute()
         except Exception as e:
             return e
