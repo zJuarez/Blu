@@ -1032,7 +1032,7 @@ class MyParser:
         | print
         '''
         if p[1] == 'POS':
-            self.Quad.append((QOp.POS, p[2][0], -1, p[2][1]))
+            self.Quad.append((QOp.POS, p[2][0], p[2][1], -1))
         elif p[1] == 'POLYGON':
             x = 1
         elif p[1] == 'PENDOWN' or p[1] == 'PENUP':
@@ -1394,15 +1394,36 @@ class MyParser:
         '''
         self.POper.append(p[1])
         p[0] = p[1]
-
+    
     def p_factor(self, p):
         '''
-        factor : cteE
+        factor : mod factorP
+        '''
+        if self.POper and (self.POper[-1] == '*' or self.POper[-1] == '/'):
+            self.handle_expresion_type()
+        p[0] = ''
+    
+    def p_factorP(self, p):
+        '''
+        factorP : percentP mod
+        | empty
+        '''
+        p[0] = ''
+    
+    def p_percentP(self,p):
+        '''
+        percentP : PERCENT
+        '''
+        self.POper.append(p[1])
+
+    def p_mod(self, p):
+        '''
+        mod : cteE
         | var 
         | getEstado
         | lparenExp expresion rparenExp
         '''
-        if self.POper and (self.POper[-1] == '*' or self.POper[-1] == '/'):
+        if self.POper and (self.POper[-1] == '%'):
             self.handle_expresion_type()
         p[0] = ''
 

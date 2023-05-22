@@ -1,0 +1,17 @@
+PENDOWN
+FLOAT cx = GET_POS_X, cy = GET_POS_Y
+
+FOR(180){
+    GO 100
+    RIGHT 30
+    GO 20
+    LEFT 60
+    GO 50
+    RIGHT 30
+    PENUP
+    POS cx cy
+    PENDOWN
+    RIGHT 2
+}
+
+POS 1000 1000

@@ -1,0 +1,10 @@
+FUNCTION VOID square(INT x){
+  PENDOWN
+  FOR (4) {
+    GO x
+    RIGHT 90
+  }
+  PENUP
+}
+
+square(100)

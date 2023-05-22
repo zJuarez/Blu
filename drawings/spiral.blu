@@ -1,0 +1,8 @@
+BG "black"
+STRING colors[6] = ["red", "purple", "blue", "green", "orange", "yellow"]
+FOR(x,1,360){
+    COLOR colors[x%6]
+    WIDTH x 
+    GO x 
+    LEFT 59
+}

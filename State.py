@@ -120,6 +120,7 @@ class QOp(Enum):
     SET_ARRAY = 34
     POLYGON = 35
     RANDOM = 36
+    MOD = 37
 
 operator_to_quadop = {
     "=" : QOp.EQUAL,
@@ -134,7 +135,8 @@ operator_to_quadop = {
     "==" : QOp.EQUAL_EQUAL,
     "!=" : QOp.EXC_EQUAL,
     "&&" : QOp.AND,
-    "||" : QOp.OR
+    "||" : QOp.OR,
+    "%" : QOp.MOD,
 }
 
 state_toquadop = {

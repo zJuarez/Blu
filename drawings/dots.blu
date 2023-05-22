@@ -1,0 +1,14 @@
+FUNCTION VOID dot(INT cx, INT cy, INT r){
+    PENDOWN
+    CIRCLE cx-r cy-r cx+r cy+r
+    PENUP
+}
+
+INT gap = 50
+INT dotRadius = 5
+
+FOR(INT currentGapX = gap, currentGapX <= CANVAS_WIDTH - gap, currentGapX = currentGapX + gap){
+    FOR(INT currentGapY = gap, currentGapY <= CANVAS_HEIGHT - gap, currentGapY = currentGapY + gap){
+        dot(currentGapX, currentGapY, dotRadius)
+    }
+}

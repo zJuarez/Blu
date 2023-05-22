@@ -1,5 +1,0 @@
-FUNCTION VOID square(INT x, BOOL y, STRING z){
-
-}
-
-BOOL x = TRUE

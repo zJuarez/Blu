@@ -138,15 +138,16 @@ class MaquinaVirtual:
     def write(self, dir_vir, val = None):
         my_dir_vir = 0
         if isinstance(dir_vir, int):
-            my_dir_vir = dir_vir
+            my_dir_vir = [dir_vir]
         else:
             # it's array or matrix
             my_dir_vir = self.get_dir_vir_array(dir_vir)
-
-        if my_dir_vir < self.first_local:
-           self.gmemory[my_dir_vir] = val
-        elif my_dir_vir < self.first_const:
-            self.lmemory.set(my_dir_vir,val)
+        
+        for my_dir_virX in my_dir_vir:
+            if my_dir_virX < self.first_local:
+                self.gmemory[my_dir_virX] = val
+            elif my_dir_virX < self.first_const:
+                self.lmemory.set(my_dir_virX,val)
         
     def execute(self):
         # get the start time
@@ -154,12 +155,12 @@ class MaquinaVirtual:
         stack = []
         pc = 0  # program counter
         self.clear_canvas()
-        for idx, v in enumerate(self.quads):
-            print(str(idx) + "." + str(v))
+        #fcleaor idx, v in enumerate(self.quads):
+         #   print(str(idx) + "." + str(v))
         while pc < len(self.quads):
             q = self.quads[pc]
             op = q[0]
-            print(pc)
+            # print(pc)
            # switch statement using QOp enumeration
             if op == QOp.EQUAL:
                 self.write(q[3], None if q[1] is None else self.read(q[1]))
@@ -196,6 +197,8 @@ class MaquinaVirtual:
                 self.write(q[3], self.read(q[1]) and self.read(q[2]))
             elif op == QOp.OR:
                 self.write(q[3], self.read(q[1]) or self.read(q[2]))
+            elif op == QOp.MOD:
+                 self.write(q[3], self.read(q[1]) % self.read(q[2]))
             elif op == QOp.GOTO:
                 pc = q[1]
                 continue
@@ -304,7 +307,6 @@ class MaquinaVirtual:
                     self.write(arg[Var.DIR_VIR], args_values[idx])
                 # go to pc of fun
                 pc = fun_symbol[Var.QUAD]
-                self.lmemory.print()
                 continue
             elif op == QOp.PARAM:
                 self.lmemory.add_arg(q[1])
