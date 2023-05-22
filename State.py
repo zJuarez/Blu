@@ -80,6 +80,7 @@ class Error(Enum):
     ID_NEEDS_SQUARE_BRACKETS = 26
     EXPRESSION_INSIDE_SQUARE_BRACKETS_MUST_BE_INT = 27
     OUT_OF_BOUNDS = 28
+    EXPRESSION_MUST_BE_ATOMIC_VALUE = 29
 
 class QOp(Enum):
     EQUAL = 0
@@ -212,6 +213,8 @@ def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_
         return "Error : Expression inside square brackets must be int type"
     elif error == Error.OUT_OF_BOUNDS:
         return "Error : Out of bounds"
+    elif error == Error.EXPRESSION_MUST_BE_ATOMIC_VALUE:
+        return "Error : Expression inside array must be atomic value (single)"
     else:
         return "Error not found"
     
@@ -223,8 +226,10 @@ def initialStateSymbols(w = 800,h = 700):
         'GET_COLOR' : {Var.ID : 'GET_COLOR' , Var.TIPO : Tipo.STRING, Var.KIND : Kind.STATE, Var.VAL : Color.BLACK.value, Var.DIR_VIR: 3},
         'IS_PENDOWN' : {Var.ID : 'IS_PENDOWN' , Var.TIPO : Tipo.BOOL, Var.KIND : Kind.STATE, Var.VAL : False, Var.DIR_VIR: 4},
         'IS_PENUP' : {Var.ID : 'IS_PENDOWN' , Var.TIPO : Tipo.BOOL, Var.KIND : Kind.STATE, Var.VAL : True, Var.DIR_VIR: 5},
-        'GET_WIDTH' : {Var.ID : 'GET_WIDTH' , Var.TIPO : Tipo.FLOAT, Var.KIND : Kind.STATE, Var.VAL : 1, Var.DIR_VIR: 6},
+        'GET_WIDTH' : {Var.ID : 'GET_WIDTH' , Var.TIPO : Tipo.INT, Var.KIND : Kind.STATE, Var.VAL : 1, Var.DIR_VIR: 6},
         'GET_ORIENTATION' : {Var.ID : 'GET_ORIENTATION' , Var.TIPO : Tipo.FLOAT, Var.KIND : Kind.STATE, Var.VAL : 0, Var.DIR_VIR: 7},
+        'CANVAS_WIDTH' : {Var.ID : 'CANVAS_WIDTH' , Var.TIPO : Tipo.INT, Var.KIND : Kind.STATE, Var.VAL : w, Var.DIR_VIR: 8},
+        'CANVAS_HEIGHT' : {Var.ID : 'CANVAS_HEIGHT' , Var.TIPO : Tipo.INT, Var.KIND : Kind.STATE, Var.VAL : h, Var.DIR_VIR: 9},
     }
 
 def get_tipo(tipo):

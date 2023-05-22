@@ -1,0 +1,11 @@
+FUNCTION INT fact(INT x){
+    INT ret
+    IF (x == 1){
+        ret = 1
+    }ELSE{
+        ret = x*fact(x-1)
+    }
+    RETURN ret
+}
+
+PRINT fact(4)

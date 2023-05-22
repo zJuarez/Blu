@@ -1,13 +1,21 @@
-INT heart[22] = [200, 150,
-    180, 130,
-    120, 130,
-    100, 150,
-    100, 190,
-    200, 290,
-    300, 190,
-    300, 150,
-    280, 130,
-    220, 130,
-    200, 150]
+FUNCTION VOID d_heart(INT cx, INT cy, INT t, STRING color)
+{
 
-POLYGON  heart "red"
+    POLYGON [cx, cy,
+        cx-t, cy-t,
+        cx-t*4, cy-t,
+        cx-t*5,  cy,
+        cx-t*5, cy + t*2,
+        cx, cy+t*7,
+        cx+t*5, cy + t*2,
+        cx+t*5, cy,
+        cx+t*4, cy-t,
+        cx+t, cy-t,
+        cx, cy] color
+}
+
+
+STRING colors[3] = ["red", "pink", "purple"]
+FOR(20){ 
+  d_heart(RANDOM 0 CANVAS_WIDTH, RANDOM 0 CANVAS_HEIGHT, RANDOM 10 50 , colors[RANDOM 0 2])
+}

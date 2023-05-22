@@ -16,6 +16,7 @@ class MyParser:
         self.width = width
         self.height = height
         self.canvas = canvas
+        self.state = initialStateSymbols(width, height)
     
     def change_dimensions(self, w, h):
         self.width = w
@@ -26,8 +27,7 @@ class MyParser:
         self.curr_symbol_table = SymbolTable()
         self.func_table = SymbolTable()
         # añadir valores inicales del width, color, pos, etc.
-        initialVals = initialStateSymbols(self.width, self.height)
-        for key,value in initialVals.items():
+        for key,value in self.state.items():
             self.curr_symbol_table.add_symbol(key, value)
         self.memoria = Memoria()
         self.curr_state = State()
@@ -944,14 +944,29 @@ class MyParser:
 
     def p_acteP(self, p):
         '''
-        acteP : cte actePP
+        acteP : expresionSingle actePP
         '''
-        # single element
+
         if p[2] and p[1][1] != p[2][0][1]:
             # type checking
             self.p_error(get_error_message(Error.ALL_ARRAY_ELEMENTS_MUST_BE_SAME_TYPE))
         p[0] = [p[1]] + p[2]
-
+    
+    def p_expresionSingle(self,p):
+        '''
+        expresionSingle : expresion
+        '''
+        if self.PilaO and self.PTypes:
+            val_dir = self.PilaO.pop()
+            val_type = self.PTypes.pop()
+            # tuples with 3,5,2 means single var of array, of matrix and array of values respectively
+            if isinstance(val_dir, tuple):
+                if len(val_dir) == 2:
+                    #error since we only want single values
+                    self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_ATOMIC_VALUE))
+            p[0] = (val_dir, val_type)
+        else:
+            self.p_error(get_error_message(Error.INTERNAL_STACKS))
     def p_actePP(self, p):
         '''
         actePP : COMMA acteP 
@@ -1038,6 +1053,7 @@ class MyParser:
         '''
         polygonOp : polygon1p fillOp
         '''
+        # p[1] es array de direcciones
         self.Quad.append((QOp.POLYGON, p[1], p[2]))
 
     def p_polygon1p(self,p):
@@ -1144,7 +1160,7 @@ class MyParser:
 
     def p_llamarRest(self,p):
         '''
-        llamarRest : LPAREN llamarP RPAREN 
+        llamarRest : lparenLlamar llamarP rparenLlamar 
         '''
         if not self.PArgsCont or not self.PIdLlamar:
             self.p_error(get_error_message(Error.INTERNAL_STACKS))
@@ -1158,6 +1174,20 @@ class MyParser:
         self.Quad.append((QOp.GOSUB, id))
         p[0] = ''
     
+    def p_lparenLlamar(self,p):
+        '''
+        lparenLlamar : LPAREN
+        '''
+        # fondo falso!
+        self.POper.append('[') 
+
+    def p_rparenLlamar(self,p):
+        '''
+        rparenLlamar : RPAREN
+        '''
+        # fondo falso!
+        self.POper.pop()
+
     def p_llamarP(self, p):
         '''
         llamarP : expresion postExpLlamar llamarPP
@@ -1470,20 +1500,21 @@ class MyParser:
         | IS_PENUP
         | GET_WIDTH
         | GET_ORIENTATION
+        | CANVAS_WIDTH
+        | CANVAS_HEIGHT
         | RANDOM randomOp
         '''
         if p[1] == "RANDOM":
-            random_dir_vir = self.memoria.add(Section.TEMP, Tipo.FLOAT)
+            tipo = Tipo.FLOAT if p[2] == "empty" else Tipo.INT
+            random_dir_vir = self.memoria.add(Section.TEMP, tipo)
             self.Quad.append((QOp.RANDOM, p[2], random_dir_vir))
             self.PilaO.append(random_dir_vir)
-            self.PTypes.append(Tipo.FLOAT)
+            self.PTypes.append(tipo)
         else:
             # append el id de la expresion a la pila 
-            state = initialStateSymbols(self.width, self.height)
-            self.PilaO.append(state[p[1]][Var.DIR_VIR])
+            self.PilaO.append(self.state[p[1]][Var.DIR_VIR])
             # append el tipo
-            symbol = self.curr_symbol_table.get_symbol(p[1])
-            self.PTypes.append(symbol[Var.TIPO])
+            self.PTypes.append(self.state[p[1]][Var.TIPO])
         p[0] = p[1]
 
     def p_randomOp(self,p):

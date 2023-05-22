@@ -169,9 +169,9 @@ class MaquinaVirtual:
                 for i, el in enumerate(q[1]):
                     if isinstance(el, list):
                         for j, e in enumerate(el):
-                            self.write(q[3]+i*len(el)+j, e)
+                            self.write(q[3]+i*len(el)+j, self.read(e))
                     else:
-                        self.write(q[3]+i, el)
+                        self.write(q[3]+i, self.read(el))
             elif op == QOp.PLUS:
                 self.write(q[3], self.read(q[1]) + self.read(q[2]))
             elif op == QOp.MINUS:
@@ -229,11 +229,16 @@ class MaquinaVirtual:
                     self.canvas.create_oval(x0,y0,x1,y1, fill=self.read(q[5]))
             elif op == QOp.POLYGON:
                 # using id
-                values = q[1]
+                values = []
+                # tupla de 2 por que le da un array
                 if isinstance(q[1], tuple):
                     values = self.read(q[1])
+                else:
+                    # acte array
+                    for dir in q[1]:
+                        values.append(self.read(dir))
                 if len(values)%2 == 1:
-                    values.pop() # must be pair
+                    values.pop() # must be pair xd
                 c = 0
                 size = len(values)
                 points = []

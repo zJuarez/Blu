@@ -43,6 +43,8 @@ class MyLexer(object):
     'ENDL' : 'ENDL',
     'POLYGON' : 'POLYGON',
     'RANDOM' : 'RANDOM',
+    'CANVAS_WIDTH' : 'CANVAS_WIDTH',
+    'CANVAS_HEIGHT' : 'CANVAS_HEIGHT'
     }
 
     # All tokens must be named in advance.
