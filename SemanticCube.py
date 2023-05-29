@@ -53,7 +53,7 @@ class SemanticCube:
                 "<": None,
                 ">=": None,
                 "<=": None,
-                "==": None,
+                "==": {Tipo.CHAR : Tipo.BOOL},
                 "!=": None,
                 "&&": None,
                 "||": None

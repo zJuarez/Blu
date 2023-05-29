@@ -1,9 +1,11 @@
 from tkinter import Tk
 import tkinter
-from State import QOp, Var, initialStateSymbols, get_error_message, Error
+from State import QOp, Var, initialStateSymbols, get_error_message, Error, Tipo
 import math
 import time
 import random
+import re
+
 class Memoria:
     def __init__(self, parent = None, fun_id = "_main"):
         self.parent = parent
@@ -35,7 +37,7 @@ class Memoria:
        print(self.args)
 
 class MaquinaVirtual:
-    def __init__(self, quads, func_table, cmemory, w, h, canvas = None):
+    def __init__(self, quads, func_table, cmemory, w, h, canvas = None, result_text = None):
         self.quads = quads
         self.func_table = func_table
         self.gmemory = {}
@@ -53,6 +55,7 @@ class MaquinaVirtual:
         self.logs = ""
         self.first_local = 10000
         self.first_const = 28000
+        self.result_text = result_text
         if canvas is None:
             self.canvas = tkinter.Canvas(None, width=w, height=h, bd=0, bg="white")
         else:
@@ -137,6 +140,9 @@ class MaquinaVirtual:
     
     def write(self, dir_vir, val = None):
         my_dir_vir = 0
+
+        print(dir_vir)
+        print(val)
         if isinstance(dir_vir, int):
             my_dir_vir = [dir_vir]
         else:
@@ -146,22 +152,55 @@ class MaquinaVirtual:
         for my_dir_virX in my_dir_vir:
             if my_dir_virX < self.first_local:
                 self.gmemory[my_dir_virX] = val
+                print("please ss")
             elif my_dir_virX < self.first_const:
                 self.lmemory.set(my_dir_virX,val)
-        
-    def execute(self):
+    
+    def check_variable_type(self, val):
+        if re.match(r'^[0-9]+\.[0-9]+$', val):
+            return Tipo.FLOAT
+        elif re.match(r'^[0-9]+$', val):
+            return Tipo.INT
+        elif re.match(r'^\'[a-z]\'$', val):
+            return Tipo.CHAR
+        elif re.match(r'^\".*?\"$', val):
+            return Tipo.STRING
+        elif val == "TRUE" or "FALSE":
+            return Tipo.BOOL
+        else:
+            return "Unknown"
+    
+    def read_add(self, dir_vir, tipo, val):
+        tipo_val = self.check_variable_type(val)
+        if tipo_val != tipo:
+           raise Exception(f"\nVar reading type mismatch")
+        else:
+            if tipo_val == Tipo.INT:
+                self.write(dir_vir, int(val))
+            elif tipo_val == Tipo.FLOAT:
+                self.write(dir_vir, float(val))
+            elif tipo_val == Tipo.BOOL:
+                self.write(dir_vir, val == "TRUE")
+            else:
+                self.write(dir_vir,  val[1:-1])
+                print("here!")
+                print(val)
+                print(val[1:-1])
+
+    def execute(self, start = 0):
         # get the start time
         st = time.time()
         stack = []
-        pc = 0  # program counter
+        pc = start  # program counter
         self.clear_canvas()
-        #fcleaor idx, v in enumerate(self.quads):
-         #   print(str(idx) + "." + str(v))
+        # self.result_text.configure(state="disabled")
+        for idx, v in enumerate(self.quads):
+            print(str(idx) + "." + str(v))
         while pc < len(self.quads):
             q = self.quads[pc]
             op = q[0]
-            # print(pc)
-           # switch statement using QOp enumeration
+            print(pc)
+            # switch statement using QOp enumeration
             if op == QOp.EQUAL:
                 self.write(q[3], None if q[1] is None else self.read(q[1]))
             elif op == QOp.EQUALP:
@@ -282,12 +321,17 @@ class MaquinaVirtual:
             elif op == QOp.ORIENTATION:
                 self.write(self.dir["GET_ORIENTATION"], self.read(q[1])%360)
             elif op == QOp.PRINT:
+                print(q)
                 if(q[1] != -1):
                     self.logs+=(str(self.read(q[1])))
                 if q[3] :
                     self.logs+= '\n'
                 else :
                     self.logs+= " "
+            elif op == QOp.READ:
+                self.logs+= '\n'
+                self.result_text.configure(state="normal")
+                return q + (pc + 1,)
             elif op == QOp.ERA:
                 result = None
             elif op == QOp.GOSUB:
@@ -323,6 +367,8 @@ class MaquinaVirtual:
                 et = time.time()
                 elapsed_time = et - st
                 self.logs+=f'\nExecution time: {elapsed_time} seconds'
+                self.result_text.insert(self.result_text.index("end"), self.logs)
+                self.result_text.configure(state="disabled")
                 self.update_arrow()
             pc += 1  # move to the next quad
         return self.logs

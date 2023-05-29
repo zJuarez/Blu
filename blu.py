@@ -1,6 +1,7 @@
 import sys
 import tkinter as tk
 from PIL import Image, ImageTk
+from MaquinaVirtual import MaquinaVirtual
 from myparser import MyParser
 from console import console
 
@@ -15,6 +16,10 @@ class BluUI:
         self.height = dim[1]
         self.my_parser = MyParser(dim[0], dim[1], self.canvas)
         self.data = data
+        self.input = None
+        self.start = 0
+        self.mv = None
+        self.read = None
 
     # Define a function to minimize the application
     def minimize_app(self):
@@ -110,11 +115,25 @@ class BluUI:
         self.result_header = tk.Label(self.text_frame, text=" ", font=("Arial", 16, "bold"), bg="#AFABAB")
         self.result_header.pack(padx=10, pady=5)
 
+        def process_input(event):
+            user_input = self.result_text.get("end-1c linestart", "end-1c lineend")
+            try:
+                self.mv.read_add(self.read[1], self.read[2], user_input)
+            except Exception as e:
+                logs = e
+                self.canvas.delete("all")
+                self.result_text.insert(self.result_text.index("end"), logs)
+            print("User input:", user_input)
+            self.compile_code_rest(canvas_width, canvas_height, self.read[3])
+
         # Cuadro de texto de resultados
         self.result_text = tk.Text(self.text_frame, bd=0, bg="#D0CECE")
         self.result_text.pack(fill=tk.BOTH, expand=True)
-        self.result_text.configure(font = ("Consolas", 13), state="disabled")
+        self.result_text.configure(font = ("Consolas", 13))
+        self.result_text.bind("<Return>", process_input)
         return (canvas_width, canvas_height)
+    
+    
 
     def create_frames(self):
         """Crea los marcos para los widgets."""
@@ -145,21 +164,37 @@ class BluUI:
     def clear_code(self):
         self.code_text.delete("1.0", "end")
 
+    def compile_code_rest(self,cw,ch, pc):
+        read = "" 
+        try :
+            read = self.mv.execute(start=pc)
+            if isinstance(read, tuple):
+                    self.read = read
+        except Exception as e:
+            self.result_text.insert(self.result_text.index("end"), e)
+            self.canvas.delete("all")
+
     def compile_code(self, cw, ch):
         code = self.code_text.get("1.0", "end")
         self.result_text.configure(state="normal")
         self.result_text.delete("1.0", "end")
         self.result_text.insert("1.0",console)
-        logs = ""        
-        try :
-            logs = self.my_parser.parse(code)
-        except Exception as e:
-            logs = e
-            self.canvas.delete("all")
+        self.result_text.configure(state="normal")
+        parser = self.my_parser.parse(code)
 
-        self.result_text.insert(self.result_text.index("end"), logs)
-        self.result_text.configure(state="disabled")
-        pass
+        if parser[0] == "ERROR":
+            self.result_text.insert(self.result_text.index("end"), parser[1])
+        else:
+            self.mv = MaquinaVirtual(parser[0], parser[1], parser[2], self.width, self.height, self.canvas, self.result_text)
+        read = ""        
+        try :
+            read = self.mv.execute()
+            # read
+            if isinstance(read, tuple):
+                    self.read = read
+        except Exception as e:
+            self.result_text.insert(self.result_text.index("end"), e)
+            self.canvas.delete("all")
 
 
 if __name__ == "__main__":

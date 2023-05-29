@@ -44,7 +44,8 @@ class MyLexer(object):
     'POLYGON' : 'POLYGON',
     'RANDOM' : 'RANDOM',
     'CANVAS_WIDTH' : 'CANVAS_WIDTH',
-    'CANVAS_HEIGHT' : 'CANVAS_HEIGHT'
+    'CANVAS_HEIGHT' : 'CANVAS_HEIGHT',
+    'READ' : 'READ',
     }
 
     # All tokens must be named in advance.

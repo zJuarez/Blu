@@ -224,26 +224,11 @@ class MyParser:
 
     def p_arg(self, p):
         '''
-        arg : tipo ID argP
+        arg : tipo ID 
         '''
         self.PTiposDec.pop()
-        # TODO what if arg is an array? what's size? 
-        var = {Var.ID : p[2], Var.TIPO : p[1], Var.DIR_VIR : self.memoria.add(Section.LOCAL, p[1])} | p[3]
+        var = {Var.ID : p[2], Var.TIPO : p[1], Var.KIND : Kind.SINGLE, Var.DIR_VIR : self.memoria.add(Section.LOCAL, p[1])}
         p[0] = [var]
-
-    def p_argP(self, p):
-        '''
-        argP : LSQBRACKET RSQBRACKET argPP 
-        | empty
-        '''
-        p[0] = {Var.KIND : Kind.SINGLE} if(len(p) <4) else p[3]
-
-    def p_argPP(self, p):
-        '''
-        argPP : LSQBRACKET RSQBRACKET  
-        | empty
-        '''
-        p[0] = {Var.KIND : Kind.ARRAY} if(len(p) <3) else {Var.KIND : Kind.MATRIX}
 
     def p_bloquefun(self, p):
         '''
@@ -590,7 +575,7 @@ class MyParser:
             # equal to the value of the pointer instead of int
             self.Quad.append((QOp.EQUALP,invisible_var, '',id_dir))
             temp_var_suma = self.memoria.add(Section.TEMP, Tipo.INT)
-             # Guardar los quads de asig TODO should the sum be 1 or the size of dim2 if exists
+             # Guardar los quads de asig 
             asigQuads.append((QOp.PLUS, invisible_var, self.memoria.add(Section.CONST, Tipo.INT, 1), temp_var_suma))
             asigQuads.append((QOp.EQUAL, temp_var_suma, '',invisible_var))
             
@@ -716,7 +701,6 @@ class MyParser:
                     # same type! create quad
                     self.Quad.append((QOp.EQUAL, dir_vir_of_exp, -1,var_dir))
                 elif(var_type == Tipo.INT and exp_type == Tipo.FLOAT):
-                    # TODO Ask about casts
                     self.Quad.append((QOp.EQUAL, dir_vir_of_exp, -1,var_dir))
                 elif(var_type == Tipo.FLOAT and exp_type == Tipo.INT):
                     # Ask about casts
@@ -912,16 +896,6 @@ class MyParser:
         dir_vir = self.memoria.add(Section.CONST, p[1][1], p[1][0])
         p[0] = p[1] + (dir_vir,)
 
-    def p_cte(self, p):
-        '''
-        cte : ICTE 
-        | FCTE
-        | SCTE
-        | CCTE
-        | bcte
-        '''
-        p[0] = p[1]
-
     def p_bcte(self, p):
         '''
         bcte : TRUE
@@ -1030,14 +1004,16 @@ class MyParser:
         | LEFT expresion
         | ORIENTATION expresion
         | print
+        | readP
         '''
+        print(p[1])
         if p[1] == 'POS':
             self.Quad.append((QOp.POS, p[2][0], p[2][1], -1))
         elif p[1] == 'POLYGON':
             x = 1
         elif p[1] == 'PENDOWN' or p[1] == 'PENUP':
             self.Quad.append((get_quad_operation_from_state(p[1]),))
-        elif p[1] != 'PRINT':
+        elif p[1] != 'PRINT' and p[1] != 'READ':
             first_type = self.PTypes.pop()
             if p[1] != "BG" and p[1] != "COLOR" and first_type != Tipo.INT and first_type != Tipo.FLOAT:
                      self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_NUMERIC, p[1]))
@@ -1049,6 +1025,32 @@ class MyParser:
                 self.p_error(get_error_message(Error.INTERNAL_STACKS))
         p[0] = ''
     
+    def p_readP(self,p):
+        '''
+        readP : READ ID readPP
+        '''
+        var = self.curr_symbol_table.get_symbol(p[2])
+        print(var)
+        if var[Var.KIND] != Kind.SINGLE:
+            self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_ATOMIC_VALUE))
+        reads = [(var[Var.DIR_VIR], var[Var.TIPO])] + p[3]
+        print(reads)
+        for read in reads:
+            self.Quad.append((QOp.READ, read[0], read[1]))
+        p[0] = p[1]
+
+    def p_readPP(self,p):
+        '''
+        readPP : ID readPP
+        | empty
+        '''
+        if p[1] != 'empty':
+            var = self.curr_symbol_table.get_symbol(p[1])
+            if var[Var.KIND] != Kind.SINGLE:
+                self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_ATOMIC_VALUE))
+            p[0] = [(var[Var.DIR_VIR], var[Var.TIPO])] + p[2]
+        else:
+            p[0] = []
     def p_polygonOp(self,p):
         '''
         polygonOp : polygon1p fillOp
@@ -1058,17 +1060,17 @@ class MyParser:
 
     def p_polygon1p(self,p):
         '''
-        polygon1p : ID polygon1pSB
+        polygon1p : ID 
         | acte
         '''
-        if len(p)>2:
+        #its an id
+        if isinstance(p[1], str):
             id = p[1]
             info = self.curr_symbol_table.get_symbol(id)
             if info == None:
                 self.p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, id))
-            if info[Var.KIND] != p[2]:
+            if info[Var.KIND] != Kind.ARRAY:
                 self.p_error(get_error_message(Error.ID_IS_NOT_ITERABLE, id))
-            # TODO matrix[i] ?
             # var getting all array
             p[0] = (info[Var.DIR_VIR], info[Var.DIM1])
         else:
@@ -1076,13 +1078,6 @@ class MyParser:
             if acte_info[Var.TIPO] != Tipo.INT and acte_info[Var.TIPO] != Tipo.FLOAT:
                  self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_NUMERIC, var="Polygon points "))
             p[0] = acte_info[Var.VAL] # should be array of nums
-
-
-    def p_polygon1pSB(self,p):
-        '''
-        polygon1pSB :  empty
-        '''
-        p[0] =  Kind.ARRAY
 
     def p_fillOp(self,p):
         '''
@@ -1602,14 +1597,9 @@ class MyParser:
     def parse(self, text):
         self.clear_state()
         try: 
-            result = self.parser.parse(text, lexer=self.lexer.lexer)
-            self.memoria.print()
-            return self.execute()
+            self.parser.parse(text, lexer=self.lexer.lexer)
+            return (self.Quad, self.func_table, self.memoria.get_const_map())
         except Exception as e:
-            return e
-    
-    def execute(self):
-        mv = MaquinaVirtual(self.Quad, self.func_table, self.memoria.get_const_map(), self.width, self.height, self.canvas)
-        return mv.execute()
+            return ("ERROR", e)
 
         

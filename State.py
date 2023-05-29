@@ -121,6 +121,7 @@ class QOp(Enum):
     POLYGON = 35
     RANDOM = 36
     MOD = 37
+    READ = 38
 
 operator_to_quadop = {
     "=" : QOp.EQUAL,
@@ -216,7 +217,7 @@ def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_
     elif error == Error.OUT_OF_BOUNDS:
         return "Error : Out of bounds"
     elif error == Error.EXPRESSION_MUST_BE_ATOMIC_VALUE:
-        return "Error : Expression inside array must be atomic value (single)"
+        return "Error : Expression must be atomic value (single)"
     else:
         return "Error not found"
     

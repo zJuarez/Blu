@@ -1,0 +1,22 @@
+FUNCTION VOID d_heart(INT cx, INT cy, INT t, STRING color)
+{
+    INT temp[22]= [cx, cy,
+        cx-t, cy-t,
+        cx-t*4, cy-t,
+        cx-t*5,  cy,
+        cx-t*5, cy + t*2,
+        cx, cy+t*7,
+        cx+t*5, cy + t*2,
+        cx+t*5, cy,
+        cx+t*4, cy-t,
+        cx+t, cy-t,
+        cx, cy]
+    PRINT "HERE"
+    POLYGON temp color
+}
+
+
+STRING colors[3] = ["red", "pink", "purple"]
+FOR(20){ 
+  d_heart(RANDOM 0 CANVAS_WIDTH, RANDOM 0 CANVAS_HEIGHT, RANDOM 10 50 , colors[RANDOM 0 2])
+}

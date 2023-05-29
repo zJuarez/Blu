@@ -1,0 +1,7 @@
+STRING x
+READ x
+IF(x == "HOLA"){
+PRINT "HELL"
+}ELSE{
+PRINT "ASASSA"
+}
