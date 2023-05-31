@@ -18,44 +18,26 @@ class MyParser:
         self.canvas = canvas
         self.state = initialStateSymbols(width, height)
     
-    def change_dimensions(self, w, h):
-        self.width = w
-        self.height = h
-
     def clear_state(self):
-        self.errores = 0
         self.curr_symbol_table = SymbolTable()
         self.func_table = SymbolTable()
+        self.Cube = SemanticCube()
+        self.memoria = Memoria()
         # añadir valores inicales del width, color, pos, etc.
         for key,value in self.state.items():
             self.curr_symbol_table.add_symbol(key, value)
-        self.memoria = Memoria()
-        self.curr_state = State()
         self.PilaO = []
         self.POper = []
         self.Quad = []
         self.PTypes = []
         self.PArgsCont = []
         self.PIdLlamar = []
-        self.TempCount = 0
-        self.Cube = SemanticCube()
         self.PSaltosFor = []
         self.PSaltosFunc = []
         self.PGoto = []
         self.PGotoF = []
         self.PTiposDec = []
         self.FuncionID = ""
-    
-    def get_next_temp(self):
-        temp_var = 'z_' + str(self.TempCount)
-        self.TempCount = self.TempCount + 1
-        return temp_var
-    
-    # helper function to get type from symbol_object {id: {Var.ID: ..., }}
-    def get_type_of_symbol_obj(self, symbol_obj):
-        symbol_id = list(symbol_obj.keys())[0]
-        tipo_var = symbol_obj[symbol_id][Var.TIPO]
-        return tipo_var
     
     # using stacks and creating quads
     def handle_expresion_type(self):
@@ -115,7 +97,7 @@ class MyParser:
         codigo : funcion codigoP
         | estatuto codigoP
         '''
-        p[0] = '' if True else ('CORRECTO' if self.errores == 0  else "INCORRECTO" , [p[1]] + [p[2]])
+        p[0] = 'CODIGO'
 
     def p_codigoP(self, p):
         '''
@@ -470,7 +452,7 @@ class MyParser:
         asigQuads = []
         # loop X times
         if len(p) == 2:
-            invisible_var = self.memoria.add(Section.TEMP, Tipo.INT, 1)
+            invisible_var = self.memoria.add(Section.TEMP, Tipo.INT)
             self.Quad.append((QOp.EQUAL, self.memoria.add(Section.CONST, Tipo.INT, 1), -1, invisible_var))
             # dejar migaja de pan para volver despues a asignar y evaluar
             self.PSaltosFor.append(len(self.Quad))
@@ -496,7 +478,7 @@ class MyParser:
         # p[1] is a string = id
         if len(p) == 6 and not isinstance(p[1], dict):
             id = p[1]
-            id_dir = self.memoria.add(Section.LOCAL, Tipo.INT, p[3])
+            id_dir = self.memoria.add(Section.LOCAL, Tipo.INT)
             self.Quad.append((QOp.EQUAL, p[3], -1, id_dir))
             symbol = {id : {Var.ID: id, Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.DIR_VIR : id_dir}}
             # adding id as cont in block
@@ -556,11 +538,11 @@ class MyParser:
                 self.Quad.append((QOp.SET_ARRAY, p[3][Var.VAL], -1, iterable_id_dir))
 
             # starts at iterable id address
-            invisible_var = self.memoria.add(Section.TEMP, Tipo.INT, val=iterable_id_dir)
+            invisible_var = self.memoria.add(Section.TEMP, Tipo.INT)
             self.Quad.append((QOp.EQUAL, self.memoria.add(Section.CONST, Tipo.INT, iterable_id_dir), -1, invisible_var))
 
             exp_bool = self.memoria.add(Section.TEMP, Tipo.BOOL)
-            sup_limit = self.memoria.add(Section.TEMP, Tipo.INT, val = iterable_id_dir + p[3][Var.DIM1])
+            sup_limit = self.memoria.add(Section.TEMP, Tipo.INT)
             self.Quad.append((QOp.EQUAL, self.memoria.add(Section.CONST, Tipo.INT, iterable_id_dir + p[3][Var.DIM1]),-1, sup_limit))
             # dejar migaja de pan para volver despues de asignar a evaluar
             self.PSaltosFor.append(len(self.Quad))
@@ -617,7 +599,7 @@ class MyParser:
             if p[1] != tipo_exp:
                  self.p_error(get_error_message(Error.TYPE_MISMATCH))
             val = self.PilaO.pop()
-            id_dir = self.memoria.add(Section.LOCAL, p[1], val)
+            id_dir = self.memoria.add(Section.LOCAL, p[1])
             symbol = {p[2] : {Var.ID: p[2], Var.TIPO : p[1], Var.KIND : Kind.SINGLE, Var.VAL : val, Var.DIR_VIR : id_dir}}
             self.Quad.append((QOp.EQUAL, val, -1, id_dir))
             # adding dec simple to table
@@ -742,8 +724,7 @@ class MyParser:
         '''
         declarar : tipo declararSimple declararP
         '''
-        # 11 limpiar curr state ?
-        self.curr_state.clear()
+        # 11 limpiar curr state 
         self.PTiposDec.pop()
         p[0] = ('DECLARAR' , [p[2]] + p[3])
         # self.curr_symbol_table.print()
@@ -757,7 +738,7 @@ class MyParser:
 
     def p_declararSimple(self, p):
         '''
-        declararSimple : myid declararSimpleOpciones
+        declararSimple : ID declararSimpleOpciones
         '''
         # 2 almacenar el id
         id = p[1]
@@ -772,7 +753,7 @@ class MyParser:
             tipo = self.PTiposDec[-1]
             size = 1 if var[Var.KIND] == Kind.SINGLE else var[Var.DIM1] if var[Var.KIND] == Kind.ARRAY else var[Var.DIM1] * var[Var.DIM2]
             val = None if Var.VAL not in var else var[Var.VAL]
-            dir_vir = self.memoria.add(section, tipo, val, size)
+            dir_vir = self.memoria.add(section, tipo, size=size)
             self.curr_symbol_table.add_symbol(id, var | {Var.DIR_VIR : dir_vir})
             if var[Var.KIND] == Kind.SINGLE and val != None:
                 self.Quad.append((QOp.EQUAL, val, -1, dir_vir))
@@ -781,13 +762,6 @@ class MyParser:
             # print("añadiendo a la tabla " + str(id))
         p[0] = var
     
-    def p_myid(self,p):
-        '''
-        myid : ID
-        '''
-        self.curr_state.add_info(Var.ID, p[1])
-        p[0] = p[1]
-
     def p_declararSimpleOpciones(self, p):
         '''
         declararSimpleOpciones : EQUAL expresion 
@@ -801,7 +775,6 @@ class MyParser:
             if self.PilaO and self.PTypes:
                 p[0] = {Var.VAL : self.PilaO.pop(), Var.KIND : Kind.SINGLE}
                 l_type = self.PTiposDec[-1]
-                l_val = self.curr_state.get_info(Var.ID)
                 r_type = self.PTypes.pop()
                 if l_type != r_type:
                     if (l_type == Tipo.INT and r_type == Tipo.FLOAT) or (l_type == Tipo.FLOAT and r_type == Tipo.INT):
@@ -809,14 +782,8 @@ class MyParser:
                     else:
                         op = {
                                 'operator' : "=",
-                                'left' : {
-                                    'val' : str(l_val),
-                                    'tipo' : str(l_type)
-                                },
-                                'right' : {
-                                    'val' : "exp",
-                                    'tipo' : str(r_type)
-                                }
+                                'left' : str(l_type),
+                                'right' :  str(r_type),
                             }
                         self.p_error(get_error_message(Error.TYPE_MISMATCH, type_mism=op))
             else:
