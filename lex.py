@@ -45,7 +45,7 @@ class MyLexer(object):
     'RANDOM' : 'RANDOM',
     'CANVAS_WIDTH' : 'CANVAS_WIDTH',
     'CANVAS_HEIGHT' : 'CANVAS_HEIGHT',
-    'READ' : 'READ',
+    'READ' : 'READ'
     }
 
     # All tokens must be named in advance.

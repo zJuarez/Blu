@@ -1,0 +1,13 @@
+FUNCTION VOID fibIt(INT x){
+    INT curr = 1, prev = 0
+    PRINT prev, curr
+    FOR(i,1,x){
+        INT next = prev + curr
+        PRINT next
+        prev = curr
+        curr = next
+    }
+}
+
+INT x
+fibIt(5)

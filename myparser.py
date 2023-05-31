@@ -462,8 +462,8 @@ class MyParser:
 
     def p_cicloCont(self, p):
         '''
-        cicloCont : icteC
-        | ID COMMA icteC COMMA icteC
+        cicloCont : intExpresion
+        | ID COMMA intExpresion COMMA intExpresion
         | decSimple COMMA forExp COMMA asignacionS
         | ID IN cicloArray
         '''
@@ -484,7 +484,7 @@ class MyParser:
             temp_var_bool = self.memoria.add(Section.TEMP, Tipo.INT)
 
             # generar quad de expresion
-            sup_limit = p[1][2]
+            sup_limit = p[1]
             self.Quad.append((QOp.LCOMP_EQUAL, invisible_var, sup_limit, temp_var_bool))
 
             # generar gotof, luego rellenamos
@@ -492,14 +492,13 @@ class MyParser:
             # pushear gotof que despues se rellenara con el final del for
             self.PSaltosFor.append(len(self.Quad) - 1)
 
-
         # loop from [x,y] usig id
         # p[1] is a string = id
         if len(p) == 6 and not isinstance(p[1], dict):
             id = p[1]
-            id_dir = self.memoria.add(Section.LOCAL, Tipo.INT, p[3][0])
-            self.Quad.append((QOp.EQUAL, p[3][2], -1, id_dir))
-            symbol = {id : {Var.ID: id, Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.VAL : p[3][0], Var.DIR_VIR : id_dir}}
+            id_dir = self.memoria.add(Section.LOCAL, Tipo.INT, p[3])
+            self.Quad.append((QOp.EQUAL, p[3], -1, id_dir))
+            symbol = {id : {Var.ID: id, Var.TIPO : Tipo.INT, Var.KIND : Kind.SINGLE, Var.DIR_VIR : id_dir}}
             # adding id as cont in block
             self.curr_symbol_table.add_symbol_object(symbol)
             # dejar migaja de pan para volver despues de asignar a evaluar
@@ -514,7 +513,7 @@ class MyParser:
             temp_var_bool = self.memoria.add(Section.TEMP, Tipo.BOOL)
 
             # generar quad de expresion
-            sup_limit = p[5][2]
+            sup_limit = p[5]
             self.Quad.append((QOp.LCOMP_EQUAL, id_dir, sup_limit, temp_var_bool))
             # generar gotof, luego rellenamos
             self.Quad.append((QOp.GOTOF, temp_var_bool))
@@ -973,10 +972,24 @@ class MyParser:
         ascte : LSQBRACKET acteP RSQBRACKET
         '''
         p[0] = p[2]
-
+    
+    def p_intExpresion(self, p):
+        '''
+        intExpresion : expresion 
+        '''
+        if len(self.PilaO) > 0 and len(self.PTypes) > 0:
+            first_type = self.PTypes.pop()
+            if (first_type != Tipo.INT):
+                    self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_INT_VALUE, ""))
+            dir_vir = self.PilaO.pop()
+            if isinstance(dir_vir, tuple) and len(dir_vir) == 2:
+                 self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_INT_VALUE, ""))
+            p[0] = dir_vir
+        else:
+            self.p_error(get_error_message(Error.INTERNAL_STACKS))
     def p_twoExpNum(self,p):
         '''
-        twoExpNum : expresion expresion
+        twoExpNum : expresion COMMA expresion
         '''
         if len(self.PilaO) > 1 and len(self.PTypes) > 1:
             first_type = self.PTypes.pop()
@@ -1027,13 +1040,9 @@ class MyParser:
     
     def p_readP(self,p):
         '''
-        readP : READ ID readPP
+        readP : READ expresionVarID readPP
         '''
-        var = self.curr_symbol_table.get_symbol(p[2])
-        print(var)
-        if var[Var.KIND] != Kind.SINGLE:
-            self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_ATOMIC_VALUE))
-        reads = [(var[Var.DIR_VIR], var[Var.TIPO])] + p[3]
+        reads = [p[2]] + p[3]
         print(reads)
         for read in reads:
             self.Quad.append((QOp.READ, read[0], read[1]))
@@ -1041,14 +1050,11 @@ class MyParser:
 
     def p_readPP(self,p):
         '''
-        readPP : ID readPP
+        readPP : expresionVarID readPP
         | empty
         '''
         if p[1] != 'empty':
-            var = self.curr_symbol_table.get_symbol(p[1])
-            if var[Var.KIND] != Kind.SINGLE:
-                self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_ATOMIC_VALUE))
-            p[0] = [(var[Var.DIR_VIR], var[Var.TIPO])] + p[2]
+            p[0] = [p[1]] + p[2]
         else:
             p[0] = []
     def p_polygonOp(self,p):
@@ -1081,7 +1087,7 @@ class MyParser:
 
     def p_fillOp(self,p):
         '''
-        fillOp : expresion
+        fillOp : COMMA expresion
         | empty
         '''
         if "empty" == p[1]:
@@ -1119,7 +1125,7 @@ class MyParser:
 
     def p_printP(self, p):
         '''
-        printP : expresion printP
+        printP : COMMA expresion printP
         | ENDL
         | empty
         '''
@@ -1128,7 +1134,7 @@ class MyParser:
         elif p[1] == "ENDL":
             p[0] = (0, True)
         else:
-            p[0] = (1 + p[2][0], p[2][1])
+            p[0] = (1 + p[3][0], p[3][1])
 
     def p_llamar(self, p):
         '''
@@ -1451,26 +1457,21 @@ class MyParser:
         self.PTypes.append(p[1][1])
         p[0] = p[1] 
 
-    def p_var(self, p):
+    def p_expresionVarID(self,p):
         '''
-        var : ID varP
-        | idllamar llamarRest
+        expresionVarID : ID varP
         '''
-        # 1 si el id no existe error
         symbol = self.curr_symbol_table.get_symbol(p[1])
+        dir_vir = 0
         if (symbol is None):
             self.p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, p[1]))
-        elif symbol[Var.TIPO] == Tipo.VOID:
-            self.p_error(get_error_message(Error.VOID_IN_EXPRESION, var = p[1]))
-        elif symbol[Var.KIND] == Kind.FUNCTION:
-            # global to PilaO
-            self.PilaO.append(symbol[Var.DIR_VIR])
-        elif symbol[Var.KIND] == Kind.SINGLE:
+        if symbol[Var.KIND] == Kind.SINGLE:
             # lo usaste como array [] error
             if p[2] != Kind.SINGLE:
                 self.p_error(get_error_message(Error.ID_IS_NOT_ITERABLE, var = p[1]))
             # add single var dir to PilaO
-            self.PilaO.append(symbol[Var.DIR_VIR])
+            # self.PilaO.append(symbol[Var.DIR_VIR])
+            dir_vir = symbol[Var.DIR_VIR]
         # is array o matrix
         else:
             # using arrays and matrix as they are not.
@@ -1484,7 +1485,8 @@ class MyParser:
                         self.p_error(get_error_message(Error.EXPRESSION_INSIDE_SQUARE_BRACKETS_MUST_BE_INT))
                     dir_vir_array_start= symbol[Var.DIR_VIR]
                     dir_vir_array_indexed = (dir_vir_array_start, index_dir_vir, symbol[Var.DIM1])
-                    self.PilaO.append(dir_vir_array_indexed)
+                    # self.PilaO.append(dir_vir_array_indexed)
+                    dir_vir = dir_vir_array_indexed
                 else:
                     self.p_error(get_error_message(Error.INTERNAL_STACKS))
             else:
@@ -1497,12 +1499,36 @@ class MyParser:
                         self.p_error(get_error_message(Error.EXPRESSION_INSIDE_SQUARE_BRACKETS_MUST_BE_INT))
                     dir_vir_array_start= symbol[Var.DIR_VIR]
                     dir_vir_array_indexed = (dir_vir_array_start, index_dir_vir_dim1, symbol[Var.DIM1], index_dir_vir_dim2, symbol[Var.DIM2])
-                    self.PilaO.append(dir_vir_array_indexed)
+                    # self.PilaO.append(dir_vir_array_indexed)
+                    dir_vir = dir_vir_array_indexed
                 else:
                     self.p_error(get_error_message(Error.INTERNAL_STACKS))
+        p[0] = (dir_vir, symbol[Var.TIPO])
            
-        # append el tipo
-        self.PTypes.append(symbol[Var.TIPO])
+    def p_var(self, p):
+        '''
+        var : expresionVarID
+        | idllamar llamarRest
+        '''
+        # llamar rest
+        if isinstance(p[1], str):
+            # 1 si el id no existe error
+            symbol = self.curr_symbol_table.get_symbol(p[1])
+            if (symbol is None):
+                self.p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, p[1]))
+            elif symbol[Var.TIPO] == Tipo.VOID:
+                self.p_error(get_error_message(Error.VOID_IN_EXPRESION, var = p[1]))
+            elif symbol[Var.KIND] == Kind.FUNCTION:
+                # global to PilaO
+                # todo
+                temp_res = self.memoria.add(Section.TEMP, symbol[Var.TIPO])
+                self.Quad.append((QOp.EQUAL, symbol[Var.DIR_VIR] ,-1,temp_res))
+                self.PilaO.append(temp_res)
+                self.PTypes.append(symbol[Var.TIPO])
+        else:
+            #expresionVarID
+            self.PilaO.append(p[1][0])
+            self.PTypes.append(p[1][1])
         # devolver algo interesante
         p[0] = ''
 

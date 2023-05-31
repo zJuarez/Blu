@@ -141,8 +141,6 @@ class MaquinaVirtual:
     def write(self, dir_vir, val = None):
         my_dir_vir = 0
 
-        print(dir_vir)
-        print(val)
         if isinstance(dir_vir, int):
             my_dir_vir = [dir_vir]
         else:
@@ -152,7 +150,6 @@ class MaquinaVirtual:
         for my_dir_virX in my_dir_vir:
             if my_dir_virX < self.first_local:
                 self.gmemory[my_dir_virX] = val
-                print("please ss")
             elif my_dir_virX < self.first_const:
                 self.lmemory.set(my_dir_virX,val)
     
@@ -183,9 +180,6 @@ class MaquinaVirtual:
                 self.write(dir_vir, val == "TRUE")
             else:
                 self.write(dir_vir,  val[1:-1])
-                print("here!")
-                print(val)
-                print(val[1:-1])
 
     def execute(self, start = 0):
         # get the start time
@@ -193,6 +187,7 @@ class MaquinaVirtual:
         stack = []
         pc = start  # program counter
         self.clear_canvas()
+        self.logs="\n"
         # self.result_text.configure(state="disabled")
         for idx, v in enumerate(self.quads):
             print(str(idx) + "." + str(v))
@@ -321,7 +316,6 @@ class MaquinaVirtual:
             elif op == QOp.ORIENTATION:
                 self.write(self.dir["GET_ORIENTATION"], self.read(q[1])%360)
             elif op == QOp.PRINT:
-                print(q)
                 if(q[1] != -1):
                     self.logs+=(str(self.read(q[1])))
                 if q[3] :
@@ -329,9 +323,10 @@ class MaquinaVirtual:
                 else :
                     self.logs+= " "
             elif op == QOp.READ:
-                self.logs+= '\n'
                 self.result_text.configure(state="normal")
-                return q + (pc + 1,)
+                if self.result_text:
+                    self.result_text.insert(self.result_text.index("end"), self.logs)
+                return q + (pc + 1, )
             elif op == QOp.ERA:
                 result = None
             elif op == QOp.GOSUB:
@@ -367,8 +362,9 @@ class MaquinaVirtual:
                 et = time.time()
                 elapsed_time = et - st
                 self.logs+=f'\nExecution time: {elapsed_time} seconds'
-                self.result_text.insert(self.result_text.index("end"), self.logs)
-                self.result_text.configure(state="disabled")
+                if self.result_text:
+                    self.result_text.insert(self.result_text.index("end"), self.logs)
+                    self.result_text.configure(state="disabled")
                 self.update_arrow()
             pc += 1  # move to the next quad
         return self.logs

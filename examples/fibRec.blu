@@ -1,0 +1,13 @@
+FUNCTION INT fib(INT x){
+    INT ret = 0
+    IF(x == 0){
+        ret = 0
+    }ELSE IF(x == 1){
+        ret = 1
+    }ELSE{
+        ret = fib(x-1) + fib(x-2)
+    }
+    RETURN ret
+}
+
+PRINT fib(5)

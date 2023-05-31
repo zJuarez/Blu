@@ -1,3 +1,4 @@
+from MaquinaVirtual import MaquinaVirtual
 from myparser import MyParser
 import sys
 import os
@@ -11,6 +12,10 @@ for fileName in files:
         print(fileName)
         print('---')
         data = file.read()
-        ast = my_parser.parse(data)
-        print(ast)
+        parser = my_parser.parse(data)
+        if (parser[0] == "ERROR"):
+            print(parser)
+        else:
+            mv = MaquinaVirtual(parser[0], parser[1], parser[2], 800, 1000)
+            print(mv.execute())
         print('---')

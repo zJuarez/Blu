@@ -1,0 +1,20 @@
+INT mat1[4][4] = [[1,2,3,4], [5,6,7,8], [9,10,11,12], [13,14,15,16]]
+INT mat2[4][4] = [[17,18,19,20], [21,22,23,24], [25,26,27,28], [29,30,31,32]]
+INT res[4][4] 
+
+INT rows1 = 3, cols2 = 3, cols1 = 3
+FOR (i,0,rows1) {
+    FOR (j,0,cols2) {
+        res[i][j] = 0; 
+        FOR (k,0,cols1) {
+            res[i][j] = res[i][j] + mat1[i][k] * mat2[k][j];
+        }
+    }
+}
+
+FOR(i,0,rows1){
+    FOR(j,0,cols2){
+        PRINT res[i][j]
+    }
+    PRINT ENDL
+}

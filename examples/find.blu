@@ -1,0 +1,17 @@
+INT a[10] = [3,10,22,9,8,5,6,10,21,1000]
+
+INT x
+PRINT "TYPE ELEMENT TO FIND" ENDL
+READ x
+
+BOOL found = False
+FOR(i,0,9){
+    IF(a[i] == x && found == FALSE){
+        PRINT "FOUND AT" , i 
+        found = TRUE
+    }
+}
+
+IF(found == FALSE){
+    PRINT "ELEMENT ", x, " NOT FOUND"
+}

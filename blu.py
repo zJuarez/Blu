@@ -186,15 +186,15 @@ class BluUI:
             self.result_text.insert(self.result_text.index("end"), parser[1])
         else:
             self.mv = MaquinaVirtual(parser[0], parser[1], parser[2], self.width, self.height, self.canvas, self.result_text)
-        read = ""        
-        try :
-            read = self.mv.execute()
-            # read
-            if isinstance(read, tuple):
-                    self.read = read
-        except Exception as e:
-            self.result_text.insert(self.result_text.index("end"), e)
-            self.canvas.delete("all")
+            read = ""        
+            try :
+                read = self.mv.execute()
+                # read
+                if isinstance(read, tuple):
+                        self.read = read
+            except Exception as e:
+                self.result_text.insert(self.result_text.index("end"), e)
+                self.canvas.delete("all")
 
 
 if __name__ == "__main__":

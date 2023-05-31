@@ -81,6 +81,7 @@ class Error(Enum):
     EXPRESSION_INSIDE_SQUARE_BRACKETS_MUST_BE_INT = 27
     OUT_OF_BOUNDS = 28
     EXPRESSION_MUST_BE_ATOMIC_VALUE = 29
+    EXPRESSION_MUST_BE_INT_VALUE = 31
 
 class QOp(Enum):
     EQUAL = 0
@@ -218,6 +219,8 @@ def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_
         return "Error : Out of bounds"
     elif error == Error.EXPRESSION_MUST_BE_ATOMIC_VALUE:
         return "Error : Expression must be atomic value (single)"
+    elif error == Error.EXPRESSION_MUST_BE_INT_VALUE:
+        return "Error : Expression must be int value (single)"
     else:
         return "Error not found"
     

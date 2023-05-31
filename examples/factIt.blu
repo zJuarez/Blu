@@ -1,0 +1,9 @@
+FUNCTION INT factIt(INT x){
+    INT res = 1
+    FOR(i,1,x){
+	res=res*i
+    }
+    RETURN res
+}
+
+PRINT factIt(4)

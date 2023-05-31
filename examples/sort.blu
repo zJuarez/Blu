@@ -1,0 +1,29 @@
+INT a[10] = [3,10,22,9,8,5,6,10,21,1000]
+
+PRINT "ARRAY BEFORE SORTING" ENDL
+
+FOR(i,0,9){
+    PRINT a[i]
+}
+
+PRINT ENDL
+
+FOR(i,0,9){
+    INT minIndex = i
+    FOR(j, i+1, 9){
+        IF(a[j] < a[minIndex]){
+            minIndex = j
+        }
+    }
+    INT temp = a[i]
+    a[i] = a[minIndex]
+    a[minIndex] = temp
+}
+
+PRINT "ARRAY AFTER SORTING" ENDL
+
+FOR(i,0,9){
+    PRINT a[i]
+}
+
+PRINT ENDL
