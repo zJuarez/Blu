@@ -1,24 +1,5 @@
 from enum import Enum
 
-class State:
-    def __init__(self):
-        self.curr = {}
-
-    def add_info(self, name, attributes):
-        self.curr[name] = attributes
-
-    def get_info(self, name):
-        return self.curr.get(name)
-    
-    def clear(self):
-        self.curr = {}
-    
-    def del_info(self, name):
-        del self.curr[name]
-
-    def get_curr(self):
-        return self.curr
-    
 class Var(Enum):
     ID = 1
     KIND = 2

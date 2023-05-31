@@ -79,8 +79,6 @@ class Memoria:
                 self.cmemory[self.memoryValues[seccion][tipo]] = val
         next_dir_vir = self.memoryValues[seccion][tipo]
         self.memoryValues[seccion][tipo]+=size # prepare mempory for next var
-        # TODO how to store val ?
-        val = val if val != False else self.default[tipo]
         return next_dir_vir
     
     # end mod () -> resetear temp y local a inicial. returnear tamano de memoria que uso en el mod
