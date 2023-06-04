@@ -5,4 +5,31 @@ El propósito del lenguaje es introducir a personas con poca o nula experiencia 
 
 El desarrollador podrá decirle instrucciones al programa de cómo quiere “dibujar” virtualmente en un canvas blanco. Por ejemplo el número de píxeles que quiere dibujar, en qué dirección, con qué color, etc.
 
+## ¿Como empezar a programar en BLU?
+
+
+[VIDEO DEMO](https://youtu.be/qLQZyJZwJiI)
+
+[MANUAL DE USUARIO](https://drive.google.com/file/d/1auqcKQlxNcQ0iKDN2Wz05t-p9XV4zowF/view?usp=sharing)
+
+
+## Pasos para correr
+
+0. Tener Python instalado
+
+
+1. Clonar proyecto
+
+`git clone https://github.com/zJuarez/Blu.git`
+
+
+2. Instalar dependencias 
+
+`pip install -r requirements.txt`
+
+3. Correr UI
+
+`python blu.py`
+
+
 ![WhatsApp Image 2023-05-22 at 4 27 24 PM](https://github.com/zJuarez/Blu/assets/44931871/1cf96e11-cdd8-49b7-b345-ec53ed7dda8d)
