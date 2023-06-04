@@ -147,25 +147,34 @@ class BluUI:
     def create_frames(self):
         self.canvas_frame = tk.Frame(self.root, bd=0, relief=tk.SUNKEN, bg = "#F2F2F2")
         self.text_frame = tk.Frame(self.root, bd=0, relief=tk.SUNKEN)
-
+    
+    # traer el path de las imagenes de la ui
+    def get_path(self, fileName):
+        if hasattr(sys, '_MEIPASS'):
+            # El script se está ejecutando desde el ejecutable generado por PyInstaller
+            return os.path.join(sys._MEIPASS, 'ui', fileName)
+        else:
+            # El script se está ejecutando directamente como un archivo de Python
+            return os.path.join('ui', fileName)
+        
     #  Crea los iconos para los botones.
     def create_icons(self):
-        clear_image_path = os.path.join(sys._MEIPASS, 'ui', 'clear.png')
+        clear_image_path = self.get_path("clear.png")
         self.clear_image = Image.open(clear_image_path)
         self.clear_image = self.clear_image.resize((24, 24), Image.LANCZOS)
         self.clear_icon = ImageTk.PhotoImage(self.clear_image)
 
-        compile_image_path = os.path.join(sys._MEIPASS, 'ui', 'compile.png')
+        compile_image_path = self.get_path("compile.png")
         self.compile_image = Image.open(compile_image_path)
         self.compile_image = self.compile_image.resize((24, 24), Image.LANCZOS)
         self.compile_icon = ImageTk.PhotoImage(self.compile_image)
 
-        minimize_image_path = os.path.join(sys._MEIPASS, 'ui', 'minimize.png')
+        minimize_image_path = self.get_path("minimize.png")
         self.minimize_icon = Image.open(minimize_image_path)
         self.minimize_icon = self.minimize_icon.resize((24, 24), Image.LANCZOS)
         self.minimize_icon = ImageTk.PhotoImage(self.minimize_icon)
 
-        close_image_path = os.path.join(sys._MEIPASS, 'ui', 'close.png')
+        close_image_path = self.get_path("close.png")
         self.close_icon = Image.open(close_image_path)
         self.close_icon = self.close_icon.resize((24, 24), Image.LANCZOS)
         self.close_icon = ImageTk.PhotoImage(self.close_icon)
