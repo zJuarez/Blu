@@ -7,6 +7,12 @@ from Memoria import Memoria, Section
 from MaquinaVirtual import MaquinaVirtual
 from State import *
 
+# clase del parser
+# necesita el lexer 
+# su funcion principal es parse que devuelve 
+# una lista de quads, tabla de funciones y la
+# memoria constante
+# tambien puede lanzar errores de sintaxis en compilacion
 class MyParser:
     def __init__(self, width = 800 , height = 700, canvas = None):
         self.lexer = MyLexer()
@@ -18,14 +24,20 @@ class MyParser:
         self.canvas = canvas
         self.state = initialStateSymbols(width, height)
     
+    # reiniciar estructuras cada que cambia el codigo a parsear
     def clear_state(self):
+        # tabla de variables
         self.curr_symbol_table = SymbolTable()
+        # tabla de funciones
         self.func_table = SymbolTable()
+        # cubo semantico
         self.Cube = SemanticCube()
+        # memoria de compilacion
         self.memoria = Memoria()
         # añadir valores inicales del width, color, pos, etc.
         for key,value in self.state.items():
             self.curr_symbol_table.add_symbol(key, value)
+        # estructuras para algoritmos
         self.PilaO = []
         self.POper = []
         self.Quad = []
@@ -67,6 +79,7 @@ class MyParser:
                 self.PilaO.append(temp_var) 
                 self.PTypes.append(res_type)
     
+    # dado el objeto que devuelve la funcion p_acte regresar mas info
     def get_acte_info(self, acte):
         res = {}
         if(isinstance(acte, list)):
@@ -85,27 +98,31 @@ class MyParser:
                 res = {Var.VAL: val, Var.KIND : kind, Var.TIPO : tipo, Var.DIM1: dim1}
         return res
     
+    # gramatica principal
     def p_blu(self,p):
         '''
         blu : codigo
         '''
+        # end
         self.Quad.append((QOp.END, -1,-1,-1 ))
         p[0]=p[1]
 
+    # puede tener funciones o estatutos
     def p_codigo(self, p):
         '''
         codigo : funcion codigoP
         | estatuto codigoP
         '''
         p[0] = 'CODIGO'
-
+    
     def p_codigoP(self, p):
         '''
         codigoP : codigo
         | empty
         '''
         p[0] = () if p[1] == 'empty' else p[1]
-
+    
+    # gramatica de funcion
     def p_funcion(self, p):
         '''
         funcion : FUNCTION tipoFuncion idFun args bloquefun
@@ -185,7 +202,7 @@ class MyParser:
         args = p[1] + p[2]
         seen_keys = set()
         duplicated_keys = set()
-
+        # ver si hay variables repetidas
         for dictionary in args:
                 if dictionary[Var.ID] in seen_keys:
                     duplicated_keys.add(dictionary[Var.ID])
@@ -209,6 +226,7 @@ class MyParser:
         arg : tipo ID 
         '''
         self.PTiposDec.pop()
+        # va en la memoria local el arg
         var = {Var.ID : p[2], Var.TIPO : p[1], Var.KIND : Kind.SINGLE, Var.DIR_VIR : self.memoria.add(Section.LOCAL, p[1])}
         p[0] = [var]
 
@@ -216,7 +234,7 @@ class MyParser:
         '''
         bloquefun : LBRACKET bloquefunP returnX RBRACKET
         '''
-        # destroy block
+        # destroy block, regresar a tabla de variables anterior
         self.curr_symbol_table = self.curr_symbol_table.get_parent() 
         p[0] = ''
     
@@ -238,10 +256,11 @@ class MyParser:
             type_of_return = self.PTypes.pop()
             var_to_return = self.PilaO.pop()
             type_of_fun = self.PTiposDec.pop()
+            # type mismatch error en el return
             if type_of_fun != type_of_return:
                 self.p_error(get_error_message(Error.FUNTION_RETURN_TYPE_MISMATCH, ret_type_mism={"var" : self.FuncionID, "type" : type_of_fun.value, "ret_type" : type_of_return.value}))
+            # meter el quad de return
             self.Quad.append((QOp.RETURN, var_to_return, -1, -1))
-
 
     def p_bloquefunP(self, p):
         '''
@@ -250,6 +269,7 @@ class MyParser:
         '''
         p[0] = ''
 
+    # gramatica de un estatuto
     def p_estatuto(self, p):
         '''
         estatuto : condicion
@@ -260,7 +280,8 @@ class MyParser:
         | llamar
         '''
         p[0] = p[1]
-
+    
+    # gramatica de una condicion
     def p_condicion(self, p):
         '''
         condicion : IF LPAREN expresion RPAREN checkExp bloqueif condicionElse
@@ -278,6 +299,7 @@ class MyParser:
                 self.p_error(get_error_message(Error.INTERNAL_STACKS))
         p[0] = ''
     
+    # ayuda para checar la expresion del if
     def p_checkExp(self,p):
         '''
         checkExp : empty
@@ -299,6 +321,7 @@ class MyParser:
 
         p[0] = ''
 
+    # gramatica de un else
     def p_condicionElse(self, p):
         '''
         condicionElse : myElse condicionElseP 
@@ -373,6 +396,7 @@ class MyParser:
         '''
         p[0] = ''
 
+        # crear nuevo bloque de variables
     def p_lbracketif(self, p):
         '''
         lbracketif : LBRACKET
@@ -389,8 +413,8 @@ class MyParser:
         self.curr_symbol_table = self.curr_symbol_table.get_parent() 
         
         p[0] = ''
-
-
+        
+    # gramatica de los ciclos
     def p_ciclo(self, p):
         '''
         ciclo : myFor LPAREN cicloCont RPAREN bloqueCiclo
@@ -444,7 +468,8 @@ class MyParser:
         # start new block
         self.curr_symbol_table = SymbolTable(parent=self.curr_symbol_table)
         p[0] = ''
-
+    
+    # los distintos tipos de for que se aceptan por la gramatica
     def p_cicloCont(self, p):
         '''
         cicloCont : intExpresion
@@ -563,7 +588,6 @@ class MyParser:
             asigQuads.append((QOp.PLUS, invisible_var, self.memoria.add(Section.CONST, Tipo.INT, 1), temp_var_suma))
             asigQuads.append((QOp.EQUAL, temp_var_suma, '',invisible_var))
             
-        
         p[0] = asigQuads
     
     def p_forExp(self, p):
@@ -591,7 +615,7 @@ class MyParser:
         self.PSaltosFor.append(len(self.Quad))
         p[0] = '' 
 
-        # used in regular for
+    # used in regular for
     def p_decSimple(self, p):
         '''
         decSimple : tipo ID EQUAL expresion
@@ -613,7 +637,6 @@ class MyParser:
             self.p_error(get_error_message(Error.INTERNAL_STACKS))
             p[0] = "error"
        
-
     def p_cicloArray(self, p):
         '''
         cicloArray : ID
@@ -628,9 +651,11 @@ class MyParser:
             if info[Var.KIND] != Kind.ARRAY and info[Var.KIND] != Kind.MATRIX:
                 self.p_error(get_error_message(Error.ID_IS_NOT_ITERABLE, id))
             p[0] = info
+        # traer info de acte
         else:
             p[0] = self.get_acte_info(p[1])
-            
+    
+    # gramatica de asignacion
     def p_asignacion(self, p):
         '''
         asignacion : asignacionS asignacionP
@@ -643,7 +668,7 @@ class MyParser:
         | empty
         '''
         p[0] = ''
-
+    
     def p_asignacionS(self, p):
         '''
         asignacionS : idAS asignacionSA EQUAL expresion
@@ -665,6 +690,7 @@ class MyParser:
                     if self.PTypes and self.PilaO:
                         index_dir = self.PilaO.pop()
                         index_type = self.PTypes.pop()
+                        # expression inside square brackets must be int
                         if(index_type != Tipo.INT):
                             self.p_error(get_error_message(Error.EXPRESSION_INSIDE_SQUARE_BRACKETS_MUST_BE_INT))
                         var_dir = (var_dir, index_dir, var_symbol[Var.DIM1])
@@ -676,6 +702,7 @@ class MyParser:
                         index_type_2 = self.PTypes.pop()
                         index_dir_1 = self.PilaO.pop()
                         index_type_1 = self.PTypes.pop()
+                        # expression inside square brackets must be int
                         if index_type_1 != Tipo.INT or index_type_2 != Tipo.INT:
                             self.p_error(get_error_message(Error.EXPRESSION_INSIDE_SQUARE_BRACKETS_MUST_BE_INT))
                         var_dir = (var_dir, index_dir_1, var_symbol[Var.DIM1], index_dir_2, var_symbol[Var.DIM2])
@@ -690,6 +717,7 @@ class MyParser:
                     # Ask about casts
                     self.Quad.append((QOp.EQUAL, dir_vir_of_exp, -1,var_dir))
                 else:
+                    # asignation type mismatch
                     self.p_error(get_error_message(Error.TYPE_MISMATCH, type_mism={
                         "operator" : "=",
                         "left" : var_type,
@@ -723,22 +751,22 @@ class MyParser:
         '''
         p[0] = Kind.MATRIX if len(p) > 2 else Kind.ARRAY
 
+    # gramatica de declarar
     def p_declarar(self, p):
         '''
         declarar : tipo declararSimple declararP
         '''
-        # 11 limpiar curr state 
         self.PTiposDec.pop()
         p[0] = ('DECLARAR' , [p[2]] + p[3])
-        # self.curr_symbol_table.print()
-
+    
+    # multiples declaraciones en linea
     def p_declararP(self, p):
         '''
         declararP : COMMA declararSimple declararP
         | empty
         '''
         p[0] = [] if (p[1] == 'empty') else [p[2]] + p[3]
-
+    
     def p_declararSimple(self, p):
         '''
         declararSimple : ID declararSimpleOpciones
@@ -792,10 +820,11 @@ class MyParser:
             else:
                 # mistake of stacks
                 self.p_error(get_error_message(Error.INTERNAL_STACKS))
-
+        # declaro array o no declaro nada mas
         else:
             p[0] = p[1] if(p[1] != 'empty') else {Var.KIND : Kind.SINGLE}
 
+    # ayuda para declarar array
     def p_declararArray(self, p):
         '''
         declararArray : LSQBRACKET icteC RSQBRACKET declararArrayP
@@ -871,13 +900,15 @@ class MyParser:
         | FALSE
         '''
         p[0] = (p[1] == "TRUE", Tipo.BOOL)
-
+    
+    # gramatica para acte : los arrays constantes ej [1,1,2,3]
     def p_acte(self, p):
         '''
         acte : LSQBRACKET acteC
         '''
         p[0] = p[2]
     
+    # solo se pueden arrays y matrices
     def p_acteC(self, p):
         '''
         acteC :  acteP RSQBRACKET
@@ -889,12 +920,12 @@ class MyParser:
         '''
         acteP : expresionSingle actePP
         '''
-
         if p[2] and p[1][1] != p[2][0][1]:
             # type checking
             self.p_error(get_error_message(Error.ALL_ARRAY_ELEMENTS_MUST_BE_SAME_TYPE))
         p[0] = [p[1]] + p[2]
     
+    # tiene que ser un valor atomico.
     def p_expresionSingle(self,p):
         '''
         expresionSingle : expresion
@@ -910,6 +941,7 @@ class MyParser:
             p[0] = (val_dir, val_type)
         else:
             self.p_error(get_error_message(Error.INTERNAL_STACKS))
+
     def p_actePP(self, p):
         '''
         actePP : COMMA acteP 
@@ -921,8 +953,10 @@ class MyParser:
         '''
         ascteC : ascte ascteCC
         '''
+        # checar que todos los arreglos sean del mismo length
         if p[2] and p[2][0] and len(p[1]) != len(p[2][0]):
              self.p_error(get_error_message(Error.ALL_MATRIX_ARRAYS_MUST_BE_SAME_LENGTH))
+        # checar que todos los arreglos sean del mismo tipo
         if p[2] and p[2][0] and p[1] and p[1][0][1] != p[2][0][0][1]:
              self.p_error(get_error_message(Error.ALL_MATRIX_ARRAYS_MUST_BE_SAME_TYPE))
         if p[2] != [[]]:
@@ -943,6 +977,7 @@ class MyParser:
         '''
         p[0] = p[2]
     
+    # usado en los fors, checa que la expresion sea de tipo entero
     def p_intExpresion(self, p):
         '''
         intExpresion : expresion 
@@ -957,6 +992,8 @@ class MyParser:
             p[0] = dir_vir
         else:
             self.p_error(get_error_message(Error.INTERNAL_STACKS))
+    
+    # usado para POS, checa que ambas expresiones sean de tipo numerico
     def p_twoExpNum(self,p):
         '''
         twoExpNum : expresion COMMA expresion
@@ -971,7 +1008,8 @@ class MyParser:
             self.PilaO.pop()
         else:
             self.p_error(get_error_message(Error.INTERNAL_STACKS))
-
+    
+    # gramatica del estado
     def p_estado(self, p):
         '''
         estado : POS twoExpNum
@@ -989,6 +1027,7 @@ class MyParser:
         | print
         | readP
         '''
+        # cada unaa crea un quad diferente.
         if p[1] == 'POS':
             self.Quad.append((QOp.POS, p[2][0], p[2][1], -1))
         elif p[1] == 'POLYGON':
@@ -1019,6 +1058,7 @@ class MyParser:
                 self.p_error(get_error_message(Error.INTERNAL_STACKS))
         p[0] = ''
     
+    # gramatica para el read
     def p_readP(self,p):
         '''
         readP : READ expresionVarID readPP
@@ -1037,6 +1077,8 @@ class MyParser:
             p[0] = [p[1]] + p[2]
         else:
             p[0] = []
+    
+    # crear quad de polygono
     def p_polygonOp(self,p):
         '''
         polygonOp : polygon1p fillOp
@@ -1067,7 +1109,8 @@ class MyParser:
             if acte_info[Var.TIPO] != Tipo.INT and acte_info[Var.TIPO] != Tipo.FLOAT:
                  self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_NUMERIC, var="Polygon points "))
             p[0] = acte_info[Var.VAL] # should be array of nums
-
+        
+    # string opcional final para CIRCLE y POLYGON
     def p_fillOp(self,p):
         '''
         fillOp : COMMA expresion
@@ -1081,6 +1124,7 @@ class MyParser:
                 self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_STRING, var="Fill Color "))
             p[0] = self.PilaO.pop()
 
+    # gramatica para PRINT
     def p_print(self, p):
         '''
         print : PRINT printN
@@ -1118,7 +1162,8 @@ class MyParser:
             p[0] = (0, True)
         else:
             p[0] = (1 + p[3][0], p[3][1])
-
+    
+    # gramatica para llamar funciones propias
     def p_llamar(self, p):
         '''
         llamar : idllamar llamarRest
@@ -1140,7 +1185,8 @@ class MyParser:
         else:
             self.p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, p[1]))
         p[0] = p[1]
-
+    
+    # ayuda a llamar
     def p_llamarRest(self,p):
         '''
         llamarRest : lparenLlamar llamarP rparenLlamar 
@@ -1151,9 +1197,11 @@ class MyParser:
         id = self.PIdLlamar.pop()
         params_len = len(self.func_table.get_symbol(id)[Var.ARGS])
 
+        # ver si se llamo con el numero de params correctos
         if self.PArgsCont.pop() != params_len:
             self.p_error(get_error_message(Error.FUNCTION_PARAMS_DIFF,  id, {}, params_len))
-
+        
+        # crear quad de gosub
         self.Quad.append((QOp.GOSUB, id))
         p[0] = ''
     
@@ -1161,14 +1209,14 @@ class MyParser:
         '''
         lparenLlamar : LPAREN
         '''
-        # fondo falso!
+        # meter fondo falso!
         self.POper.append('[') 
 
     def p_rparenLlamar(self,p):
         '''
         rparenLlamar : RPAREN
         '''
-        # fondo falso!
+        # quitar fondo falso!
         self.POper.pop()
 
     def p_llamarP(self, p):
@@ -1191,7 +1239,8 @@ class MyParser:
         | empty 
         '''
         p[0] = ''
-
+    
+    # ir sumando los argumentos y verificar los tipos de cada uno
     def p_postExpLlamar(self,p):
         ''' 
         postExpLlamar : empty
@@ -1220,7 +1269,8 @@ class MyParser:
         self.PArgsCont[-1] = self.PArgsCont[-1] + 1
         self.Quad.append((QOp.PARAM, self.PilaO.pop(), "param" + str(self.PArgsCont[-1])))
         p[0] = p[1]
-
+    
+    # gramatica de los tipos
     def p_tipo(self, p):
         '''
         tipo : INT 
@@ -1233,7 +1283,8 @@ class MyParser:
         tipo = get_tipo(p[1])
         self.PTiposDec.append(tipo)
         p[0] = tipo
-
+    
+    # la super expresion
     def p_expresion(self, p):
         '''
         expresion : expresionA expresionP
@@ -1376,7 +1427,8 @@ class MyParser:
         percentP : PERCENT
         '''
         self.POper.append(p[1])
-
+    
+    # lo importante de las expresiones 
     def p_mod(self, p):
         '''
         mod : cteE
@@ -1416,7 +1468,13 @@ class MyParser:
         # append el tipo
         self.PTypes.append(p[1][1])
         p[0] = p[1] 
-
+    
+    # es un id de un valor atomico
+    # y que puede venir de una variable simple ej x
+    # de un arreglo ej x[0]
+    # o de una matriz ej x[0][0]
+    # se usa en read y en expresiones
+    # porque no tengo operaciones con arreglos ni mat
     def p_expresionVarID(self,p):
         '''
         expresionVarID : ID varP
@@ -1464,7 +1522,10 @@ class MyParser:
                 else:
                     self.p_error(get_error_message(Error.INTERNAL_STACKS))
         p[0] = (dir_vir, symbol[Var.TIPO])
-           
+    
+    # las variables establecidas por el usuario
+    # se usa en expresion
+    # puede ser una variable o funcion
     def p_var(self, p):
         '''
         var : expresionVarID
@@ -1491,7 +1552,8 @@ class MyParser:
             self.PTypes.append(p[1][1])
         # devolver algo interesante
         p[0] = ''
-
+    
+    # accesar variables del estado y random
     def p_getEstado(self, p):
         '''
         getEstado : GET_POS_X
@@ -1525,7 +1587,8 @@ class MyParser:
         | empty
         '''
         p[0] = p[1]
-
+    
+    # ayudan a expresionVarID
     def p_varP(self, p):
         '''
         varP : varPArray
@@ -1557,7 +1620,8 @@ class MyParser:
         | empty
         '''
         p[0] = Kind.MATRIX if len(p) > 3 else Kind.ARRAY
-
+    
+    # bloque normal que contiene estatutos y esta entre llaves
     def p_bloque(self, p):
         '''
         bloque : LBRACKET bloqueP RBRACKET
@@ -1576,15 +1640,20 @@ class MyParser:
         empty : 
         '''
         p[0] = 'empty'
-
+    # tirar excepcion cuando haya un error en compilacion
     def p_error(self, p):
         raise Exception(p)
-
+    # funcion principal que recibe codigo
+    # y lo devuelve parseado en una lista de quads de operacion
+    # tabla de funciones y memoria constante
+    # tambien puede lanzar errores
     def parse(self, text):
+        # reinicia las estructuras ed datos
         self.clear_state()
         try: 
             self.parser.parse(text, lexer=self.lexer.lexer)
             debug = True
+            # imprimir resultados de compilacion
             if(debug):
                    print("FUNC TABLE : ")
                    self.func_table.print()
@@ -1597,6 +1666,7 @@ class MyParser:
                     print(str(idx) + "." + str(v))
                    print()
                    print("RESULT: ")
+            # devolver resultados de compilacion
             return (self.Quad, self.func_table, self.memoria.get_const_map())
         except Exception as e:
             return ("ERROR", e)

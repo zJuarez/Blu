@@ -3,6 +3,8 @@ from enum import Enum
 
 first_local = 10000
 first_const = 28000
+
+# tipos de secciones de variables
 class Section(Enum):
     GLOBAL = 1,
     LOCAL = 2,
@@ -10,6 +12,7 @@ class Section(Enum):
     CONST = 4,
     STATE = 5,
 
+# memoria para compilacion
 class Memoria:
     def __init__(self):
         self.default = {
@@ -89,6 +92,7 @@ class Memoria:
         self.memoryValues[Section.TEMP] = self.get_initial_memory_values()[Section.TEMP] 
         return memoryUsedInMod
     
+    # sirve para ver que memeoria se uso en el scope
     def get_dif_of_section(self, section):
         return {
             section : {
@@ -104,6 +108,7 @@ class Memoria:
     def get_dif(self, seccion, tipo):
         return self.memoryValues[seccion][tipo] - self.get_initial_memory_values()[seccion][tipo]
     
+    # para debugear
     def print(self):
         print(self.get_dif_of_section(Section.GLOBAL))
         print(self.get_dif_of_section(Section.LOCAL))
@@ -111,6 +116,7 @@ class Memoria:
         print(self.get_dif_of_section(Section.CONST))
         print(self.constMap)
     
+    # para darsela a la mv
     def get_const_map(self):
         return self.cmemory
 

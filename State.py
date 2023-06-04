@@ -1,5 +1,8 @@
 from enum import Enum
 
+# constantes que se usan a lo largo de todo el programa
+
+# llaves que se usan para la info que se guarda en la tabla de variables
 class Var(Enum):
     ID = 1
     KIND = 2
@@ -12,6 +15,7 @@ class Var(Enum):
     ERA = 9
     QUAD = 10
 
+# tipos de valores para KIND (para variables)
 class Kind(Enum):
     SINGLE = 1
     ARRAY = 2
@@ -19,10 +23,12 @@ class Kind(Enum):
     FUNCTION = 4
     STATE = 5
 
+# color para las variables de estado iniciales
 class Color(Enum):
     WHITE = "#FFFFFF"
     BLACK = "#000000"
 
+# constantes de tipo para no equivocarme al escribirlas
 class Tipo(Enum):
     INT = "INT"
     FLOAT = "FLOAT"
@@ -32,6 +38,7 @@ class Tipo(Enum):
     VOID = "VOID"
     NOT_DECLARED = "NOT_DECLARED"
 
+# constantes de errores
 class Error(Enum):
     REDECLARED_VARIABLE = 1
     VARIABLE_NOT_DECLARED = 2
@@ -64,6 +71,7 @@ class Error(Enum):
     EXPRESSION_MUST_BE_ATOMIC_VALUE = 29
     EXPRESSION_MUST_BE_INT_VALUE = 31
 
+# enum de los codigos de operacion de los quads
 class QOp(Enum):
     EQUAL = 0
     PLUS = 1
@@ -105,6 +113,7 @@ class QOp(Enum):
     MOD = 37
     READ = 38
 
+# dado el operador devolver la operacion del quad
 operator_to_quadop = {
     "=" : QOp.EQUAL,
     "+" : QOp.PLUS,
@@ -122,6 +131,7 @@ operator_to_quadop = {
     "%" : QOp.MOD,
 }
 
+# dado el comando del estado devolver la operacion del quad
 state_toquadop = {
     "BG" : QOp.BG,
     "COLOR" : QOp.COLOR,
@@ -135,12 +145,15 @@ state_toquadop = {
     "ORIENTATION" : QOp.ORIENTATION,
 }
 
+# dado el operador devolver la operacion del quad
 def get_quad_operation_from_operator(operator):
     return operator_to_quadop[operator]
 
+# dado el comando del estado devolver la operacion del quad
 def get_quad_operation_from_state(state):
     return state_toquadop[state]
 
+# dado la constante del error devolver mas info sobre ese error en str
 def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_type_mism = {}, ret_type_mism = {} , msg = "", ass = {}, type=""):
     if error == Error.REDECLARED_VARIABLE:
         return "Error : " + f"Variable '{var}' already declared"
@@ -204,7 +217,10 @@ def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_
         return "Error : Expression must be int value (single)"
     else:
         return "Error not found"
-    
+
+# dado el width y height del canvas establecer las variables iniciales
+# del canvas. tambien cuentan con su direccion virtual unica fuera
+# de las constantes de memoria
 def initialStateSymbols(w = 800,h = 700): 
     return {
         'GET_POS_X' : {Var.ID : 'GET_POS_X' , Var.TIPO : Tipo.FLOAT, Var.KIND : Kind.STATE, Var.VAL : w/2, Var.DIR_VIR: 0},
@@ -219,6 +235,7 @@ def initialStateSymbols(w = 800,h = 700):
         'CANVAS_HEIGHT' : {Var.ID : 'CANVAS_HEIGHT' , Var.TIPO : Tipo.INT, Var.KIND : Kind.STATE, Var.VAL : h, Var.DIR_VIR: 9},
     }
 
+# dado el tipo en str devolver el tipo enum
 def get_tipo(tipo):
     if tipo == "INT":
         return Tipo.INT

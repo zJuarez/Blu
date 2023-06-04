@@ -6,6 +6,7 @@ from MaquinaVirtual import MaquinaVirtual
 from myparser import MyParser
 from console import console
 
+# Clase principal que tiene la UI del lenguaje
 class BluUI:
     def __init__(self, root, data):
         self.root = root
@@ -20,6 +21,9 @@ class BluUI:
         self.input = None
         self.start = 0
         self.mv = None
+        # read guarda la informacion del quad de read
+        # la regresa cuando el usuario la teclea y da enter
+        # para que la mv pueda continuar con la ejecucion
         self.read = None
 
     # Define a function to minimize the application
@@ -74,7 +78,6 @@ class BluUI:
         # Configure the compound option to display both text and image
         clear_button.config(compound=tk.LEFT)
 
-
         # Canvas
         self.canvas = tk.Canvas(self.canvas_frame, width=canvas_width, height=canvas_height, bd=0, bg="white")
         self.canvas.pack(fill=tk.BOTH, expand=True)
@@ -90,9 +93,11 @@ class BluUI:
         code_header = tk.Frame(self.text_frame, padx=10, pady=5, bg="#AFABAB")
         code_header.pack(side="top", fill=tk.BOTH)
 
+        # boton de compilar
         compile_button = tk.Label(code_header, image=self.compile_icon , bg="#AFABAB")
         compile_button.image = self.compile_icon
         compile_button.pack(side="right")
+        # la funcion de compilar
         compile_button.bind("<Button-1>", lambda event: self.compile_code(canvas_width, canvas_height))
         compile_button.bind("<Enter>", lambda event: compile_button.config(cursor="hand2"))
         compile_button.bind("<Leave>", lambda event: compile_button.config(cursor=""))
@@ -115,34 +120,36 @@ class BluUI:
         # Header para el cuadro de texto de resultados
         self.result_header = tk.Label(self.text_frame, text=" ", font=("Arial", 16, "bold"), bg="#AFABAB")
         self.result_header.pack(padx=10, pady=5)
-
+        # cuando se introduce un valor en la terminal por medio del read
         def process_input(event):
             user_input = self.result_text.get("end-1c linestart", "end-1c lineend")
             try:
+                # añadir el valor a la variable en la maquina virtual
                 self.mv.read_add(self.read[1], self.read[2], user_input)
             except Exception as e:
                 logs = e
                 self.canvas.delete("all")
                 self.result_text.insert(self.result_text.index("end"), logs)
-            # print("User input:", user_input)
+            # la maquina virtual paro para leer este valor
+            # con esto continuamos la ejecucion en el quad que nos quedamos
             self.compile_code_rest(canvas_width, canvas_height, self.read[3])
 
         # Cuadro de texto de resultados
         self.result_text = tk.Text(self.text_frame, bd=0, bg="#D0CECE")
         self.result_text.pack(fill=tk.BOTH, expand=True)
         self.result_text.configure(font = ("Consolas", 13))
+        # crear evento cuando se haga un return.
+        # sirve en el read
         self.result_text.bind("<Return>", process_input)
         return (canvas_width, canvas_height)
     
-    
-
+    # crea los marcos para los widgets
     def create_frames(self):
-        """Crea los marcos para los widgets."""
         self.canvas_frame = tk.Frame(self.root, bd=0, relief=tk.SUNKEN, bg = "#F2F2F2")
         self.text_frame = tk.Frame(self.root, bd=0, relief=tk.SUNKEN)
 
+    #  Crea los iconos para los botones.
     def create_icons(self):
-        """Crea los iconos para los botones."""
         clear_image_path = os.path.join(sys._MEIPASS, 'ui', 'clear.png')
         self.clear_image = Image.open(clear_image_path)
         self.clear_image = self.clear_image.resize((24, 24), Image.LANCZOS)
@@ -162,45 +169,52 @@ class BluUI:
         self.close_icon = Image.open(close_image_path)
         self.close_icon = self.close_icon.resize((24, 24), Image.LANCZOS)
         self.close_icon = ImageTk.PhotoImage(self.close_icon)
-
+    
+    # limpiar canvas
     def clear_canvas(self):
         self.canvas.delete("all")
-
+    
+    # limpiar codigo
     def clear_code(self):
         self.code_text.delete("1.0", "end")
 
+    # funcion que sigue la ejecucion dado en quad 
+    # donde se quedo antes del read
     def compile_code_rest(self,cw,ch, pc):
         read = "" 
         try :
+            # aun puede haber mas reads 
             read = self.mv.execute(start=pc)
             if isinstance(read, tuple):
                     self.read = read
         except Exception as e:
             self.result_text.insert(self.result_text.index("end"), e)
             self.canvas.delete("all")
-
+    # funcion que compila el codigo
     def compile_code(self, cw, ch):
+        # traer el codigo del texto
         code = self.code_text.get("1.0", "end")
         self.result_text.configure(state="normal")
         self.result_text.delete("1.0", "end")
+        # ponerle el LOGO a la terminal
         self.result_text.insert("1.0",console)
         self.result_text.configure(state="normal")
         parser = self.my_parser.parse(code)
-
+        # hay error de sintaxis en la compilacion
         if parser[0] == "ERROR":
             self.result_text.insert(self.result_text.index("end"), parser[1])
         else:
+            # sino continuar con la ejecucion en la mv
             self.mv = MaquinaVirtual(parser[0], parser[1], parser[2], self.width, self.height, self.canvas, self.result_text)
             read = ""        
             try :
                 read = self.mv.execute()
-                # read
+                # caso read
                 if isinstance(read, tuple):
                         self.read = read
             except Exception as e:
                 self.result_text.insert(self.result_text.index("end"), e)
                 self.canvas.delete("all")
-
 
 if __name__ == "__main__":
     root = tk.Tk()
