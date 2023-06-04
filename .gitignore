@@ -1,3 +1,7 @@
 parsetab.py
 *.out
 *.pyc
+
+dist
+build
+*.spec

@@ -1,3 +1,4 @@
+import os
 import sys
 import tkinter as tk
 from PIL import Image, ImageTk
@@ -106,7 +107,7 @@ class BluUI:
         self.code_text.pack()
         self.code_text.configure(font = ("Consolas", 16))
         self.code_text_frame.pack_propagate(False)  # Disable automatic resizing of the
-        self.code_text.insert("1.0", data)
+        self.code_text.insert("1.0", "")
 
         self.margin_frame_v = tk.Frame(self.text_frame, height = height*0.6/13, bg= "#A9CBD9")
         self.margin_frame_v.pack(fill=tk.X, expand=True)
@@ -142,19 +143,23 @@ class BluUI:
 
     def create_icons(self):
         """Crea los iconos para los botones."""
-        self.clear_image = Image.open("ui/clear.png")
+        clear_image_path = os.path.join(sys._MEIPASS, 'ui', 'clear.png')
+        self.clear_image = Image.open(clear_image_path)
         self.clear_image = self.clear_image.resize((24, 24), Image.LANCZOS)
         self.clear_icon = ImageTk.PhotoImage(self.clear_image)
 
-        self.compile_image = Image.open("ui/compile.png")
+        compile_image_path = os.path.join(sys._MEIPASS, 'ui', 'compile.png')
+        self.compile_image = Image.open(compile_image_path)
         self.compile_image = self.compile_image.resize((24, 24), Image.LANCZOS)
         self.compile_icon = ImageTk.PhotoImage(self.compile_image)
 
-        self.minimize_icon = Image.open("ui/minimize.png")
+        minimize_image_path = os.path.join(sys._MEIPASS, 'ui', 'minimize.png')
+        self.minimize_icon = Image.open(minimize_image_path)
         self.minimize_icon = self.minimize_icon.resize((24, 24), Image.LANCZOS)
         self.minimize_icon = ImageTk.PhotoImage(self.minimize_icon)
 
-        self.close_icon = Image.open("ui/close.png")
+        close_image_path = os.path.join(sys._MEIPASS, 'ui', 'close.png')
+        self.close_icon = Image.open(close_image_path)
         self.close_icon = self.close_icon.resize((24, 24), Image.LANCZOS)
         self.close_icon = ImageTk.PhotoImage(self.close_icon)
 
@@ -199,12 +204,7 @@ class BluUI:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    files = sys.argv[1:] if len(sys.argv) > 1 else ["square.blu"]
-    data = ''' PRINT "HELLO WORLD"'''
-    for fileName in files:
-        with open("examples/" + fileName) as file:
-            data = file.read()
-    blu_editor = BluUI(root, data)
+    blu_editor = BluUI(root, "")
     # Make the window take up the full screen
     root.state("zoomed")
     w = blu_editor.get_dims()[0]
