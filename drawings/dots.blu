@@ -1,6 +1,6 @@
 FUNCTION VOID dot(INT cx, INT cy, INT r){
     PENDOWN
-    CIRCLE cx-r cy-r cx+r cy+r
+    CIRCLE cx-r, cy-r, cx+r, cy+r, "blue"
     PENUP
 }
 

@@ -265,6 +265,7 @@ class MyParser:
         '''
         condicion : IF LPAREN expresion RPAREN checkExp bloqueif condicionElse
         '''
+        # punto 4
         # Al final de un acabaIf o acabaElseIf
         if p[7] != "acaboElse":
              # GOTOF pendiente
@@ -284,7 +285,7 @@ class MyParser:
          # verificar que la expresion que acabamos de pasar es booleana
         if self.PTypes and self.PTypes.pop() != Tipo.BOOL:
             self.p_error(get_error_message(Error.IF_EXPRESSION_MUST_BE_BOOL))
-
+        # punto 1
         # if R paren
         if self.PilaO : 
             # quad with exp
@@ -311,6 +312,7 @@ class MyParser:
         '''
         myElse : ELSE 
         '''
+        # punto 5
         # ELSE 
         # 1 hacer goto
         self.Quad.append((QOp.GOTO,))
@@ -353,6 +355,7 @@ class MyParser:
         '''
         rbracketelse : rbracketif
         '''
+        # punto 6
         # rbracket de un else o else if
         # 1 pop pgoto y rellenar con cont
         if self.PGoto:
@@ -978,7 +981,7 @@ class MyParser:
         | PENDOWN
         | PENUP
         | WIDTH expresion
-        | CIRCLE expresion
+        | CIRCLE expresion COMMA  expresion COMMA expresion COMMA expresion fillOp
         | GO expresion
         | RIGHT expresion
         | LEFT expresion
@@ -986,13 +989,24 @@ class MyParser:
         | print
         | readP
         '''
-        print(p[1])
         if p[1] == 'POS':
             self.Quad.append((QOp.POS, p[2][0], p[2][1], -1))
         elif p[1] == 'POLYGON':
             x = 1
         elif p[1] == 'PENDOWN' or p[1] == 'PENUP':
             self.Quad.append((get_quad_operation_from_state(p[1]),))
+        elif p[1] == "CIRCLE":
+            if len(self.PilaO) < 4 and len(self.PTypes) < 4:
+                self.p_error(get_error_message(Error.INTERNAL_STACKS))
+            types = [self.PTypes.pop(), self.PTypes.pop(), self.PTypes.pop(), self.PTypes.pop()]
+            for ty in types:
+                if ty != Tipo.INT and ty != Tipo.FLOAT:
+                    self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_NUMERIC, "Circle" ))
+            y1 = self.PilaO.pop()
+            x1 = self.PilaO.pop()
+            y0 = self.PilaO.pop()
+            x0 = self.PilaO.pop()
+            self.Quad.append((QOp.CIRCLE, x0,y0,x1,y1, p[9]))
         elif p[1] != 'PRINT' and p[1] != 'READ':
             first_type = self.PTypes.pop()
             if p[1] != "BG" and p[1] != "COLOR" and first_type != Tipo.INT and first_type != Tipo.FLOAT:
@@ -1010,7 +1024,6 @@ class MyParser:
         readP : READ expresionVarID readPP
         '''
         reads = [p[2]] + p[3]
-        print(reads)
         for read in reads:
             self.Quad.append((QOp.READ, read[0], read[1]))
         p[0] = p[1]
@@ -1044,7 +1057,10 @@ class MyParser:
                 self.p_error(get_error_message(Error.VARIABLE_NOT_DECLARED, id))
             if info[Var.KIND] != Kind.ARRAY:
                 self.p_error(get_error_message(Error.ID_IS_NOT_ITERABLE, id))
+            if info[Var.TIPO] != Tipo.INT and info[Var.TIPO] != Tipo.FLOAT:
+                self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_NUMERIC, var="Polygon points "))
             # var getting all array
+            #special tuple with 2 length: ( base_dir_vir,dim1 )
             p[0] = (info[Var.DIR_VIR], info[Var.DIM1])
         else:
             acte_info = self.get_acte_info(p[1])
@@ -1105,8 +1121,7 @@ class MyParser:
 
     def p_llamar(self, p):
         '''
-        llamar : drawFunc
-        | idllamar llamarRest
+        llamar : idllamar llamarRest
         '''
         p[0] = ''
 
@@ -1206,27 +1221,6 @@ class MyParser:
         self.Quad.append((QOp.PARAM, self.PilaO.pop(), "param" + str(self.PArgsCont[-1])))
         p[0] = p[1]
 
-
-    def p_drawFunc(self, p):
-        '''
-        drawFunc : CURVE_C expresion expresion expresion expresion
-        | CURVE_Q expresion expresion expresion expresion expresion expresion
-        | CIRCLE expresion expresion expresion expresion fillOp
-        '''
-        if p[1] == "CIRCLE":
-            if len(self.PilaO) < 4 and len(self.PTypes) < 4:
-                self.p_error(get_error_message(Error.INTERNAL_STACKS))
-            types = [self.PTypes.pop(), self.PTypes.pop(), self.PTypes.pop(), self.PTypes.pop()]
-            for ty in types:
-                if ty != Tipo.INT and ty != Tipo.FLOAT:
-                    self.p_error(get_error_message(Error.EXPRESSION_MUST_BE_NUMERIC, "Circle" ))
-            y1 = self.PilaO.pop()
-            x1 = self.PilaO.pop()
-            y0 = self.PilaO.pop()
-            x0 = self.PilaO.pop()
-            self.Quad.append((QOp.CIRCLE, x0,y0,x1,y1, p[6]))
-        p[0] = ''
-
     def p_tipo(self, p):
         '''
         tipo : INT 
@@ -1238,7 +1232,6 @@ class MyParser:
         # 1 almacenar el tipo de la variable
         tipo = get_tipo(p[1])
         self.PTiposDec.append(tipo)
-        self.curr_state.add_info(Var.TIPO, tipo)
         p[0] = tipo
 
     def p_expresion(self, p):
@@ -1591,6 +1584,19 @@ class MyParser:
         self.clear_state()
         try: 
             self.parser.parse(text, lexer=self.lexer.lexer)
+            debug = True
+            if(debug):
+                   print("FUNC TABLE : ")
+                   self.func_table.print()
+                   print()
+                   print("C MEMORY : ")
+                   print(self.memoria.get_const_map())
+                   print()
+                   print("QUADS : ")
+                   for idx, v in enumerate(self.Quad):
+                    print(str(idx) + "." + str(v))
+                   print()
+                   print("RESULT: ")
             return (self.Quad, self.func_table, self.memoria.get_const_map())
         except Exception as e:
             return ("ERROR", e)

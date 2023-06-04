@@ -1,0 +1,6 @@
+FUNCTION INT sum(INT x, INT y){
+    RETURN x+y
+}
+
+PRINT sum(2*2, 4-1)
+

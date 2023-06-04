@@ -22,6 +22,7 @@ class Memoria:
         self.constMap = {}
         self.cmemory = {}
         self.memoryValues = self.get_initial_memory_values()
+        # print(self.memoryValues)
 
     def get_initial_memory_values(self): 
         first = 1000

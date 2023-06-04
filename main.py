@@ -5,13 +5,16 @@ import os
 
 my_parser = MyParser()
 
-files = sys.argv[1:] if len(sys.argv) > 1 else os.listdir('examples')
+files = sys.argv[1:] if len(sys.argv) > 1 else os.listdir('test1')
 
 for fileName in files:
-    with open("examples/" + fileName) as file:
+    with open("test1/" + fileName) as file:
         print(fileName)
         print('---')
         data = file.read()
+        print("CODE: ")
+        print(data)
+        print()
         parser = my_parser.parse(data)
         if (parser[0] == "ERROR"):
             print(parser)

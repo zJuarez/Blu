@@ -123,7 +123,7 @@ class BluUI:
                 logs = e
                 self.canvas.delete("all")
                 self.result_text.insert(self.result_text.index("end"), logs)
-            print("User input:", user_input)
+            # print("User input:", user_input)
             self.compile_code_rest(canvas_width, canvas_height, self.read[3])
 
         # Cuadro de texto de resultados

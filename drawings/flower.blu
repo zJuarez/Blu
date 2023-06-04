@@ -9,9 +9,9 @@ FOR(180){
     GO 50
     RIGHT 30
     PENUP
-    POS cx cy
+    POS cx , cy
     PENDOWN
     RIGHT 2
 }
 
-POS 1000 1000
+POS 1000, 1000

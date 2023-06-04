@@ -51,7 +51,6 @@ class MaquinaVirtual:
         self.lmemory = Memoria()
         self.cmemory = cmemory
         self.args = []
-        self.PIp = []
         self.logs = ""
         self.first_local = 10000
         self.first_const = 28000
@@ -189,12 +188,10 @@ class MaquinaVirtual:
         self.clear_canvas()
         self.logs="\n"
         # self.result_text.configure(state="disabled")
-        for idx, v in enumerate(self.quads):
-            print(str(idx) + "." + str(v))
         while pc < len(self.quads):
             q = self.quads[pc]
             op = q[0]
-            print(pc)
+            # print(pc)
             # switch statement using QOp enumeration
             if op == QOp.EQUAL:
                 self.write(q[3], None if q[1] is None else self.read(q[1]))

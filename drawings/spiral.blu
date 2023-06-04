@@ -1,8 +1,10 @@
 BG "black"
 STRING colors[6] = ["red", "purple", "blue", "green", "orange", "yellow"]
+PENDOWN
+WIDTH 3
 FOR(x,1,360){
     COLOR colors[x%6]
-    WIDTH x 
     GO x 
     LEFT 59
 }
+PENUP

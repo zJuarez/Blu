@@ -183,7 +183,7 @@ def get_error_message(error, var = '', type_mism = {}, n_expected_args = 0, fun_
     elif error == Error.FUNCTION_MUST_HAVE_RETURN:
         return f"Error : Function '{var}' must have return statement at the end"
     elif error == Error.FUNTION_RETURN_TYPE_MISMATCH:
-        return f"Error : Type mismatch on function '{ret_type_mism['var']}' of type {ret_type_mism['type']} is not the same as return : QOp.BG, of type {ret_type_mism['ret_type']}"
+        return f"Error : Type mismatch on function '{ret_type_mism['var']}' of type {ret_type_mism['type']} is not the same as return of type {ret_type_mism['ret_type']}"
     elif error == Error.ASSIGNATION_WENT_WRONG:
         return f"Error : '{ass['var']}' is a {ass['kind']} and it's being assigned as a {ass['kind_ass']}" 
     elif error == Error.EXPRESSION_MUST_BE_NUMERIC:

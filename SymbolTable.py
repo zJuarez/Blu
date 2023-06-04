@@ -1,3 +1,6 @@
+from enum import Enum
+
+
 class SymbolTable:
     def __init__(self, parent=None):
         self.symbols = {}
@@ -16,8 +19,27 @@ class SymbolTable:
     def is_declarated_in_block(self, name):
         return name in self.symbols
     
+    def imprimir_diccionario(self, diccionario, nivel=0):
+        indentacion = '  ' * nivel
+        for clave, valor in diccionario.items():
+            if isinstance(valor, dict):
+                print(f"{indentacion}{clave}:")
+                self.imprimir_diccionario(valor, nivel + 1)
+            else:
+                if isinstance(clave, Enum):
+                    clave_nombre = clave.name
+                else:
+                    clave_nombre = clave
+
+                if isinstance(valor, list):
+                    print(f"{indentacion}{clave_nombre}:")
+                    for elemento in valor:
+                        self.imprimir_diccionario(elemento, nivel + 1)
+                else:
+                    print(f"{indentacion}{clave_nombre}: {valor}")
+
     def print(self):
-        print(self.symbols)
+        self.imprimir_diccionario(self.symbols)
     
     # get symbol information given its id
     def get_symbol(self, name):

@@ -1,5 +1,5 @@
 FUNCTION VOID c(FLOAT cx, FLOAT cy, FLOAT r, STRING color){
-  CIRCLE cx - r cy - r cx + r cy + r color
+  CIRCLE cx - r, cy - r, cx + r, cy + r, color
 }
 
 FLOAT r = GET_POS_Y/2
@@ -11,6 +11,6 @@ c(GET_POS_X, GET_POS_Y, r, cookie)
 
 FLOAT chip_r = r/12
 FOR(10){
-    FLOAT cx = RANDOM GET_POS_X - r GET_POS_X + r, cy = RANDOM GET_POS_Y -r GET_POS_Y+r
+    FLOAT cx = RANDOM GET_POS_X - r, GET_POS_X + r, cy = RANDOM GET_POS_Y -r, GET_POS_Y+r
     c(cx,cy,chip_r, chip)
 }
